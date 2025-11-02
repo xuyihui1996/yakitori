@@ -1,0 +1,1409 @@
+[
+  {
+    "name": "チリソース春巻･･･",
+    "price": 350,
+    "rawText": "チリソース春巻･･･三五〇円",
+    "bbox": {
+      "x": 184,
+      "y": 305,
+      "width": 31,
+      "height": 245
+    },
+    "sourceColumn": 1,
+    "confidence": 0.9,
+    "needsReview": false
+  },
+  {
+    "name": "ゲソの唐揚げ・・・・・・・",
+    "price": 600,
+    "rawText": "ゲソの唐揚げ・・・・・・・六〇〇円",
+    "bbox": {
+      "x": 276,
+      "y": 305,
+      "width": 25,
+      "height": 244
+    },
+    "sourceColumn": 2,
+    "confidence": 0.9,
+    "needsReview": false
+  },
+  {
+    "name": "さつまスティック",
+    "price": 350,
+    "rawText": "さつまスティック三五〇円",
+    "bbox": {
+      "x": 304,
+      "y": 304,
+      "width": 27,
+      "height": 243
+    },
+    "sourceColumn": 3,
+    "confidence": 0.9,
+    "needsReview": false
+  },
+  {
+    "name": "揚げぎんなん...",
+    "price": 250,
+    "rawText": "揚げぎんなん...二五〇円",
+    "bbox": {
+      "x": 336,
+      "y": 304,
+      "width": 26,
+      "height": 243
+    },
+    "sourceColumn": 3,
+    "confidence": 0.9,
+    "needsReview": false
+  },
+  {
+    "name": "山芋スライス･････・",
+    "price": 300,
+    "rawText": "山芋スライス･････・三〇〇円",
+    "bbox": {
+      "x": 475,
+      "y": 304,
+      "width": 22,
+      "height": 241
+    },
+    "sourceColumn": 5,
+    "confidence": 0.9,
+    "needsReview": false
+  },
+  {
+    "name": "・・・・",
+    "price": 120,
+    "rawText": "・・・・一二〇円",
+    "bbox": {
+      "x": 670,
+      "y": 158,
+      "width": 21,
+      "height": 108
+    },
+    "sourceColumn": 8,
+    "confidence": 0.9,
+    "needsReview": false
+  },
+  {
+    "name": "湯どうふ(寄せ鍋風)",
+    "price": 700,
+    "rawText": "湯どうふ(寄せ鍋風)七〇〇円",
+    "bbox": {
+      "x": 658,
+      "y": 302,
+      "width": 22,
+      "height": 241
+    },
+    "sourceColumn": 8,
+    "confidence": 0.9,
+    "needsReview": false
+  },
+  {
+    "name": "もだんご......",
+    "price": 140,
+    "rawText": "もだんご......一四〇円",
+    "bbox": {
+      "x": 728,
+      "y": 58,
+      "width": 20,
+      "height": 208
+    },
+    "sourceColumn": 9,
+    "confidence": 0.9,
+    "needsReview": false
+  },
+  {
+    "name": ".....",
+    "price": 140,
+    "rawText": ".....一四〇円",
+    "bbox": {
+      "x": 698,
+      "y": 149,
+      "width": 20,
+      "height": 118
+    },
+    "sourceColumn": 9,
+    "confidence": 0.9,
+    "needsReview": false
+  },
+  {
+    "name": "なっとうおろし",
+    "price": 280,
+    "rawText": "なっとうおろし二八〇円",
+    "bbox": {
+      "x": 687,
+      "y": 303,
+      "width": 24,
+      "height": 240
+    },
+    "sourceColumn": 9,
+    "confidence": 0.9,
+    "needsReview": false
+  },
+  {
+    "name": "うずらの卵",
+    "rawText": "うずらの卵",
+    "bbox": {
+      "x": 88,
+      "y": 11,
+      "width": 19,
+      "height": 96
+    },
+    "sourceColumn": 0,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "ぼんじり",
+    "rawText": "ぼんじり",
+    "bbox": {
+      "x": 117,
+      "y": 13,
+      "width": 20,
+      "height": 81
+    },
+    "sourceColumn": 0,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "一二〇円",
+    "price": 120,
+    "rawText": "一二〇円",
+    "bbox": {
+      "x": 90,
+      "y": 186,
+      "width": 26,
+      "height": 88
+    },
+    "sourceColumn": 0,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "一二〇円",
+    "price": 120,
+    "rawText": "一二〇円",
+    "bbox": {
+      "x": 122,
+      "y": 188,
+      "width": 25,
+      "height": 85
+    },
+    "sourceColumn": 0,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "ポテトフライ",
+    "rawText": "ポテトフライ",
+    "bbox": {
+      "x": 92,
+      "y": 305,
+      "width": 26,
+      "height": 117
+    },
+    "sourceColumn": 0,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "チーズスティック･三00円",
+    "rawText": "チーズスティック･三00円",
+    "bbox": {
+      "x": 122,
+      "y": 306,
+      "width": 33,
+      "height": 246
+    },
+    "sourceColumn": 0,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "三五〇円",
+    "price": 350,
+    "rawText": "三五〇円",
+    "bbox": {
+      "x": 99,
+      "y": 467,
+      "width": 25,
+      "height": 85
+    },
+    "sourceColumn": 0,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "田舎トック",
+    "rawText": "田舎トック",
+    "bbox": {
+      "x": 136,
+      "y": 586,
+      "width": 22,
+      "height": 96
+    },
+    "sourceColumn": 0,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "お味噌汁",
+    "rawText": "お味噌汁",
+    "bbox": {
+      "x": 105,
+      "y": 587,
+      "width": 20,
+      "height": 77
+    },
+    "sourceColumn": 0,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "・",
+    "price": 0,
+    "rawText": "・〇〇円",
+    "bbox": {
+      "x": 144,
+      "y": 734,
+      "width": 21,
+      "height": 89
+    },
+    "sourceColumn": 0,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "二〇〇円",
+    "price": 200,
+    "rawText": "二〇〇円",
+    "bbox": {
+      "x": 112,
+      "y": 741,
+      "width": 22,
+      "height": 83
+    },
+    "sourceColumn": 0,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "ハツ",
+    "rawText": "ハツ",
+    "bbox": {
+      "x": 178,
+      "y": 14,
+      "width": 23,
+      "height": 62
+    },
+    "sourceColumn": 1,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "タン",
+    "rawText": "タン",
+    "bbox": {
+      "x": 213,
+      "y": 14,
+      "width": 18,
+      "height": 59
+    },
+    "sourceColumn": 1,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "二五〇円",
+    "price": 250,
+    "rawText": "二五〇円",
+    "bbox": {
+      "x": 152,
+      "y": 175,
+      "width": 23,
+      "height": 95
+    },
+    "sourceColumn": 1,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "二五〇円",
+    "price": 250,
+    "rawText": "二五〇円",
+    "bbox": {
+      "x": 214,
+      "y": 175,
+      "width": 21,
+      "height": 96
+    },
+    "sourceColumn": 1,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "一二〇円",
+    "price": 120,
+    "rawText": "一二〇円",
+    "bbox": {
+      "x": 183,
+      "y": 187,
+      "width": 25,
+      "height": 86
+    },
+    "sourceColumn": 1,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "鶏の唐揚(大)",
+    "rawText": "鶏の唐揚(大)",
+    "bbox": {
+      "x": 214,
+      "y": 305,
+      "width": 25,
+      "height": 120
+    },
+    "sourceColumn": 1,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "串カツ",
+    "rawText": "串カツ",
+    "bbox": {
+      "x": 158,
+      "y": 306,
+      "width": 16,
+      "height": 56
+    },
+    "sourceColumn": 1,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "六〇〇円",
+    "price": 600,
+    "rawText": "六〇〇円",
+    "bbox": {
+      "x": 219,
+      "y": 465,
+      "width": 24,
+      "height": 85
+    },
+    "sourceColumn": 1,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "四〇〇円",
+    "price": 400,
+    "rawText": "四〇〇円",
+    "bbox": {
+      "x": 161,
+      "y": 466,
+      "width": 22,
+      "height": 84
+    },
+    "sourceColumn": 1,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "めし(小)",
+    "rawText": "めし(小)",
+    "bbox": {
+      "x": 169,
+      "y": 586,
+      "width": 20,
+      "height": 97
+    },
+    "sourceColumn": 1,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "めし(大)",
+    "rawText": "めし(大)",
+    "bbox": {
+      "x": 201,
+      "y": 586,
+      "width": 20,
+      "height": 97
+    },
+    "sourceColumn": 1,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "二二〇円",
+    "price": 220,
+    "rawText": "二二〇円",
+    "bbox": {
+      "x": 205,
+      "y": 740,
+      "width": 22,
+      "height": 84
+    },
+    "sourceColumn": 1,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "一六〇円",
+    "price": 160,
+    "rawText": "一六〇円",
+    "bbox": {
+      "x": 173,
+      "y": 748,
+      "width": 24,
+      "height": 76
+    },
+    "sourceColumn": 1,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "シシトウ",
+    "rawText": "シシトウ",
+    "bbox": {
+      "x": 274,
+      "y": 13,
+      "width": 20,
+      "height": 83
+    },
+    "sourceColumn": 2,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "にんにく・",
+    "rawText": "にんにく・",
+    "bbox": {
+      "x": 244,
+      "y": 14,
+      "width": 20,
+      "height": 90
+    },
+    "sourceColumn": 2,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "一二〇円",
+    "price": 120,
+    "rawText": "一二〇円",
+    "bbox": {
+      "x": 244,
+      "y": 187,
+      "width": 25,
+      "height": 85
+    },
+    "sourceColumn": 2,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "一一〇円",
+    "price": 110,
+    "rawText": "一一〇円",
+    "bbox": {
+      "x": 277,
+      "y": 187,
+      "width": 23,
+      "height": 82
+    },
+    "sourceColumn": 2,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "鶏の唐揚(小)",
+    "rawText": "鶏の唐揚(小)",
+    "bbox": {
+      "x": 246,
+      "y": 304,
+      "width": 21,
+      "height": 118
+    },
+    "sourceColumn": 2,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "四〇〇円",
+    "price": 400,
+    "rawText": "四〇〇円",
+    "bbox": {
+      "x": 250,
+      "y": 465,
+      "width": 21,
+      "height": 84
+    },
+    "sourceColumn": 2,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "キムチ雑炊・",
+    "rawText": "キムチ雑炊・",
+    "bbox": {
+      "x": 261,
+      "y": 584,
+      "width": 24,
+      "height": 103
+    },
+    "sourceColumn": 2,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "おにぎり",
+    "rawText": "おにぎり",
+    "bbox": {
+      "x": 232,
+      "y": 585,
+      "width": 18,
+      "height": 74
+    },
+    "sourceColumn": 2,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "・",
+    "price": 600,
+    "rawText": "・六〇〇円",
+    "bbox": {
+      "x": 266,
+      "y": 732,
+      "width": 22,
+      "height": 87
+    },
+    "sourceColumn": 2,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "一一〇円",
+    "price": 110,
+    "rawText": "一一〇円",
+    "bbox": {
+      "x": 235,
+      "y": 745,
+      "width": 22,
+      "height": 75
+    },
+    "sourceColumn": 2,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "ビーマン",
+    "rawText": "ビーマン",
+    "bbox": {
+      "x": 338,
+      "y": 12,
+      "width": 18,
+      "height": 85
+    },
+    "sourceColumn": 3,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "なす",
+    "rawText": "なす",
+    "bbox": {
+      "x": 304,
+      "y": 13,
+      "width": 20,
+      "height": 65
+    },
+    "sourceColumn": 3,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "一一〇円",
+    "price": 110,
+    "rawText": "一一〇円",
+    "bbox": {
+      "x": 336,
+      "y": 187,
+      "width": 24,
+      "height": 83
+    },
+    "sourceColumn": 3,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "一一〇円",
+    "price": 110,
+    "rawText": "一一〇円",
+    "bbox": {
+      "x": 308,
+      "y": 188,
+      "width": 22,
+      "height": 82
+    },
+    "sourceColumn": 3,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "焼おに茶漬",
+    "rawText": "焼おに茶漬",
+    "bbox": {
+      "x": 325,
+      "y": 583,
+      "width": 20,
+      "height": 94
+    },
+    "sourceColumn": 3,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "お茶漬",
+    "rawText": "お茶漬",
+    "bbox": {
+      "x": 357,
+      "y": 583,
+      "width": 18,
+      "height": 54
+    },
+    "sourceColumn": 3,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "・",
+    "price": 550,
+    "rawText": "・五五〇円",
+    "bbox": {
+      "x": 297,
+      "y": 730,
+      "width": 21,
+      "height": 87
+    },
+    "sourceColumn": 3,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "・",
+    "price": 450,
+    "rawText": "・四五〇円",
+    "bbox": {
+      "x": 328,
+      "y": 732,
+      "width": 20,
+      "height": 84
+    },
+    "sourceColumn": 3,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "四〇〇円",
+    "price": 400,
+    "rawText": "四〇〇円",
+    "bbox": {
+      "x": 359,
+      "y": 737,
+      "width": 19,
+      "height": 79
+    },
+    "sourceColumn": 3,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "白ねぎ",
+    "rawText": "白ねぎ",
+    "bbox": {
+      "x": 367,
+      "y": 13,
+      "width": 19,
+      "height": 61
+    },
+    "sourceColumn": 4,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "しいたけ",
+    "rawText": "しいたけ",
+    "bbox": {
+      "x": 397,
+      "y": 14,
+      "width": 18,
+      "height": 84
+    },
+    "sourceColumn": 4,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "一七〇円",
+    "price": 170,
+    "rawText": "一七〇円",
+    "bbox": {
+      "x": 399,
+      "y": 186,
+      "width": 22,
+      "height": 85
+    },
+    "sourceColumn": 4,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "一一〇円",
+    "price": 110,
+    "rawText": "一一〇円",
+    "bbox": {
+      "x": 368,
+      "y": 188,
+      "width": 21,
+      "height": 82
+    },
+    "sourceColumn": 4,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "焼おにぎり",
+    "rawText": "焼おにぎり",
+    "bbox": {
+      "x": 387,
+      "y": 582,
+      "width": 18,
+      "height": 92
+    },
+    "sourceColumn": 4,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "一五〇円",
+    "price": 150,
+    "rawText": "一五〇円",
+    "bbox": {
+      "x": 390,
+      "y": 741,
+      "width": 19,
+      "height": 74
+    },
+    "sourceColumn": 4,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "えび",
+    "rawText": "えび",
+    "bbox": {
+      "x": 461,
+      "y": 14,
+      "width": 18,
+      "height": 63
+    },
+    "sourceColumn": 5,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "ししゃも",
+    "rawText": "ししゃも",
+    "bbox": {
+      "x": 490,
+      "y": 14,
+      "width": 18,
+      "height": 84
+    },
+    "sourceColumn": 5,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "二四〇円",
+    "price": 240,
+    "rawText": "二四〇円",
+    "bbox": {
+      "x": 429,
+      "y": 181,
+      "width": 21,
+      "height": 87
+    },
+    "sourceColumn": 5,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "四〇円",
+    "price": 40,
+    "rawText": "四〇円",
+    "bbox": {
+      "x": 461,
+      "y": 204,
+      "width": 18,
+      "height": 64
+    },
+    "sourceColumn": 5,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "二〇円",
+    "price": 20,
+    "rawText": "二〇円",
+    "bbox": {
+      "x": 491,
+      "y": 205,
+      "width": 19,
+      "height": 65
+    },
+    "sourceColumn": 5,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "・",
+    "price": 0,
+    "rawText": "・〇〇円",
+    "bbox": {
+      "x": 447,
+      "y": 457,
+      "width": 20,
+      "height": 88
+    },
+    "sourceColumn": 5,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "げそ",
+    "rawText": "げそ",
+    "bbox": {
+      "x": 521,
+      "y": 14,
+      "width": 18,
+      "height": 62
+    },
+    "sourceColumn": 6,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "いか",
+    "rawText": "いか",
+    "bbox": {
+      "x": 550,
+      "y": 16,
+      "width": 17,
+      "height": 61
+    },
+    "sourceColumn": 6,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "一二〇円",
+    "price": 120,
+    "rawText": "一二〇円",
+    "bbox": {
+      "x": 550,
+      "y": 186,
+      "width": 22,
+      "height": 83
+    },
+    "sourceColumn": 6,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "一三〇円",
+    "price": 130,
+    "rawText": "一三〇円",
+    "bbox": {
+      "x": 521,
+      "y": 188,
+      "width": 20,
+      "height": 81
+    },
+    "sourceColumn": 6,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "タコワサビ・",
+    "rawText": "タコワサビ・",
+    "bbox": {
+      "x": 505,
+      "y": 304,
+      "width": 20,
+      "height": 105
+    },
+    "sourceColumn": 6,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "地鶏のタタキ",
+    "rawText": "地鶏のタタキ",
+    "bbox": {
+      "x": 536,
+      "y": 304,
+      "width": 17,
+      "height": 115
+    },
+    "sourceColumn": 6,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "六〇〇円",
+    "price": 600,
+    "rawText": "六〇〇円",
+    "bbox": {
+      "x": 534,
+      "y": 458,
+      "width": 19,
+      "height": 87
+    },
+    "sourceColumn": 6,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "三五〇円",
+    "price": 350,
+    "rawText": "三五〇円",
+    "bbox": {
+      "x": 505,
+      "y": 461,
+      "width": 19,
+      "height": 83
+    },
+    "sourceColumn": 6,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "キムチ鉄板・・・",
+    "rawText": "キムチ鉄板・・・",
+    "bbox": {
+      "x": 538,
+      "y": 580,
+      "width": 18,
+      "height": 109
+    },
+    "sourceColumn": 6,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "チーズチヂミ",
+    "rawText": "チーズチヂミ",
+    "bbox": {
+      "x": 508,
+      "y": 581,
+      "width": 22,
+      "height": 111
+    },
+    "sourceColumn": 6,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "・",
+    "price": 500,
+    "rawText": "・五〇〇円",
+    "bbox": {
+      "x": 539,
+      "y": 725,
+      "width": 18,
+      "height": 85
+    },
+    "sourceColumn": 6,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "六〇〇円",
+    "price": 600,
+    "rawText": "六〇〇円",
+    "bbox": {
+      "x": 509,
+      "y": 732,
+      "width": 21,
+      "height": 80
+    },
+    "sourceColumn": 6,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "ダルム",
+    "rawText": "ダルム",
+    "bbox": {
+      "x": 608,
+      "y": 14,
+      "width": 21,
+      "height": 63
+    },
+    "sourceColumn": 7,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "三〇〇円",
+    "price": 300,
+    "rawText": "三〇〇円",
+    "bbox": {
+      "x": 580,
+      "y": 181,
+      "width": 19,
+      "height": 85
+    },
+    "sourceColumn": 7,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "一二〇円",
+    "price": 120,
+    "rawText": "一二〇円",
+    "bbox": {
+      "x": 609,
+      "y": 186,
+      "width": 20,
+      "height": 84
+    },
+    "sourceColumn": 7,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "もずく",
+    "rawText": "もずく",
+    "bbox": {
+      "x": 564,
+      "y": 303,
+      "width": 19,
+      "height": 56
+    },
+    "sourceColumn": 7,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "豚キムチ",
+    "rawText": "豚キムチ",
+    "bbox": {
+      "x": 592,
+      "y": 303,
+      "width": 21,
+      "height": 76
+    },
+    "sourceColumn": 7,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "キムチ・・・・",
+    "rawText": "キムチ・・・・",
+    "bbox": {
+      "x": 623,
+      "y": 303,
+      "width": 20,
+      "height": 84
+    },
+    "sourceColumn": 7,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "三00円",
+    "rawText": "三00円",
+    "bbox": {
+      "x": 621,
+      "y": 459,
+      "width": 20,
+      "height": 85
+    },
+    "sourceColumn": 7,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "三00円",
+    "rawText": "三00円",
+    "bbox": {
+      "x": 564,
+      "y": 461,
+      "width": 19,
+      "height": 83
+    },
+    "sourceColumn": 7,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "六五〇円",
+    "price": 650,
+    "rawText": "六五〇円",
+    "bbox": {
+      "x": 592,
+      "y": 461,
+      "width": 21,
+      "height": 82
+    },
+    "sourceColumn": 7,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "地鶏の鉄板・・・",
+    "rawText": "地鶏の鉄板・・・",
+    "bbox": {
+      "x": 599,
+      "y": 579,
+      "width": 18,
+      "height": 111
+    },
+    "sourceColumn": 7,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "ホルモン鉄板",
+    "rawText": "ホルモン鉄板",
+    "bbox": {
+      "x": 568,
+      "y": 580,
+      "width": 21,
+      "height": 110
+    },
+    "sourceColumn": 7,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "七五",
+    "price": 75,
+    "rawText": "七五",
+    "bbox": {
+      "x": 597,
+      "y": 728,
+      "width": 21,
+      "height": 41
+    },
+    "sourceColumn": 7,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "七五〇円",
+    "price": 750,
+    "rawText": "七五〇円",
+    "bbox": {
+      "x": 569,
+      "y": 730,
+      "width": 20,
+      "height": 80
+    },
+    "sourceColumn": 7,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "白軟骨",
+    "rawText": "白軟骨",
+    "bbox": {
+      "x": 639,
+      "y": 14,
+      "width": 20,
+      "height": 63
+    },
+    "sourceColumn": 8,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "アラビキ",
+    "rawText": "アラビキ",
+    "bbox": {
+      "x": 671,
+      "y": 17,
+      "width": 18,
+      "height": 81
+    },
+    "sourceColumn": 8,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "一二〇円",
+    "price": 120,
+    "rawText": "一二〇円",
+    "bbox": {
+      "x": 639,
+      "y": 185,
+      "width": 20,
+      "height": 85
+    },
+    "sourceColumn": 8,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "(冬季限定)",
+    "rawText": "(冬季限定)",
+    "bbox": {
+      "x": 645,
+      "y": 381,
+      "width": 16,
+      "height": 76
+    },
+    "sourceColumn": 8,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "ナス鉄板:",
+    "rawText": "ナス鉄板:",
+    "bbox": {
+      "x": 627,
+      "y": 578,
+      "width": 21,
+      "height": 84
+    },
+    "sourceColumn": 8,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "コーンバター",
+    "rawText": "コーンバター",
+    "bbox": {
+      "x": 658,
+      "y": 580,
+      "width": 20,
+      "height": 110
+    },
+    "sourceColumn": 8,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "三五〇円",
+    "price": 350,
+    "rawText": "三五〇円",
+    "bbox": {
+      "x": 628,
+      "y": 727,
+      "width": 19,
+      "height": 80
+    },
+    "sourceColumn": 8,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "三五〇円",
+    "price": 350,
+    "rawText": "三五〇円",
+    "bbox": {
+      "x": 658,
+      "y": 729,
+      "width": 20,
+      "height": 78
+    },
+    "sourceColumn": 8,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "しそだんご",
+    "rawText": "しそだんご",
+    "bbox": {
+      "x": 698,
+      "y": 15,
+      "width": 20,
+      "height": 103
+    },
+    "sourceColumn": 9,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "トマトスライス三00円",
+    "rawText": "トマトスライス三00円",
+    "bbox": {
+      "x": 718,
+      "y": 302,
+      "width": 19,
+      "height": 240
+    },
+    "sourceColumn": 9,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "ジャガバター",
+    "rawText": "ジャガバター",
+    "bbox": {
+      "x": 717,
+      "y": 575,
+      "width": 21,
+      "height": 111
+    },
+    "sourceColumn": 9,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "サツマバター",
+    "rawText": "サツマバター",
+    "bbox": {
+      "x": 686,
+      "y": 577,
+      "width": 21,
+      "height": 111
+    },
+    "sourceColumn": 9,
+    "confidence": 0.3,
+    "needsReview": true
+  },
+  {
+    "name": "三五〇円",
+    "price": 350,
+    "rawText": "三五〇円",
+    "bbox": {
+      "x": 717,
+      "y": 726,
+      "width": 21,
+      "height": 80
+    },
+    "sourceColumn": 9,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "三五〇円",
+    "price": 350,
+    "rawText": "三五〇円",
+    "bbox": {
+      "x": 686,
+      "y": 727,
+      "width": 21,
+      "height": 80
+    },
+    "sourceColumn": 9,
+    "confidence": 0.5,
+    "needsReview": true
+  }
+]

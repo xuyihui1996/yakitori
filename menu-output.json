@@ -1,0 +1,83 @@
+[
+  {
+    "name": "一三〇円",
+    "price": 130,
+    "rawText": "一三〇円 一三〇円",
+    "bbox": {
+      "x": 284,
+      "y": 199,
+      "width": 38,
+      "height": 95
+    },
+    "sourceColumn": 284,
+    "confidence": 0.9,
+    "needsReview": false
+  },
+  {
+    "name": "一四〇円",
+    "price": 140,
+    "rawText": "一四〇円 一四〇円",
+    "bbox": {
+      "x": 687,
+      "y": 209,
+      "width": 32,
+      "height": 97
+    },
+    "sourceColumn": 687,
+    "confidence": 0.9,
+    "needsReview": false
+  },
+  {
+    "name": "三〇〇円",
+    "price": 140,
+    "rawText": "・三〇〇円 一四〇円",
+    "bbox": {
+      "x": 729,
+      "y": 191,
+      "width": 33,
+      "height": 114
+    },
+    "sourceColumn": 729,
+    "confidence": 0.9,
+    "needsReview": false
+  },
+  {
+    "name": "にんにく",
+    "rawText": "にんにく ハツ",
+    "bbox": {
+      "x": 259,
+      "y": 21,
+      "width": 40,
+      "height": 81
+    },
+    "sourceColumn": 259,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "シシトウ",
+    "rawText": "シシトウ タン",
+    "bbox": {
+      "x": 304,
+      "y": 20,
+      "width": 31,
+      "height": 88
+    },
+    "sourceColumn": 304,
+    "confidence": 0.5,
+    "needsReview": true
+  },
+  {
+    "name": "いか",
+    "rawText": "いか もじゃも",
+    "bbox": {
+      "x": 684,
+      "y": 35,
+      "width": 22,
+      "height": 61
+    },
+    "sourceColumn": 684,
+    "confidence": 0.5,
+    "needsReview": true
+  }
+]

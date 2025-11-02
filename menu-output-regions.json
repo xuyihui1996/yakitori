@@ -1,0 +1,700 @@
+[
+  {
+    "name": "一三〇円",
+    "price": 130,
+    "rawText": "一三〇円 一三〇円",
+    "bbox": {
+      "x": 284,
+      "y": 199,
+      "width": 38,
+      "height": 95
+    },
+    "sourceColumn": 284,
+    "confidence": 0.9,
+    "needsReview": false,
+    "region": "截图 2025-11-02 14-51-50.png",
+    "regionIndex": 0
+  },
+  {
+    "name": "一四〇円",
+    "price": 140,
+    "rawText": "一四〇円 一四〇円",
+    "bbox": {
+      "x": 687,
+      "y": 209,
+      "width": 32,
+      "height": 97
+    },
+    "sourceColumn": 687,
+    "confidence": 0.9,
+    "needsReview": false,
+    "region": "截图 2025-11-02 14-51-50.png",
+    "regionIndex": 0
+  },
+  {
+    "name": "三〇〇円",
+    "price": 140,
+    "rawText": "・三〇〇円 一四〇円",
+    "bbox": {
+      "x": 729,
+      "y": 191,
+      "width": 33,
+      "height": 114
+    },
+    "sourceColumn": 729,
+    "confidence": 0.9,
+    "needsReview": false,
+    "region": "截图 2025-11-02 14-51-50.png",
+    "regionIndex": 0
+  },
+  {
+    "name": "にんにく",
+    "rawText": "にんにく ハツ",
+    "bbox": {
+      "x": 259,
+      "y": 21,
+      "width": 40,
+      "height": 81
+    },
+    "sourceColumn": 259,
+    "confidence": 0.5,
+    "needsReview": true,
+    "region": "截图 2025-11-02 14-51-50.png",
+    "regionIndex": 0
+  },
+  {
+    "name": "シシトウ",
+    "rawText": "シシトウ タン",
+    "bbox": {
+      "x": 304,
+      "y": 20,
+      "width": 31,
+      "height": 88
+    },
+    "sourceColumn": 304,
+    "confidence": 0.5,
+    "needsReview": true,
+    "region": "截图 2025-11-02 14-51-50.png",
+    "regionIndex": 0
+  },
+  {
+    "name": "いか",
+    "rawText": "いか もじゃも",
+    "bbox": {
+      "x": 684,
+      "y": 35,
+      "width": 22,
+      "height": 61
+    },
+    "sourceColumn": 684,
+    "confidence": 0.5,
+    "needsReview": true,
+    "region": "截图 2025-11-02 14-51-50.png",
+    "regionIndex": 0
+  },
+  {
+    "name": "二〇〇円",
+    "price": 200,
+    "rawText": "二〇〇円 二〇〇",
+    "bbox": {
+      "x": 11,
+      "y": 202,
+      "width": 45,
+      "height": 123
+    },
+    "sourceColumn": 11,
+    "confidence": 0.9,
+    "needsReview": false,
+    "region": "截图 2025-11-02 14-53-28.png",
+    "regionIndex": 1
+  },
+  {
+    "name": "〇〇円",
+    "price": 250,
+    "rawText": "・〇〇円 二五〇円",
+    "bbox": {
+      "x": 52,
+      "y": 192,
+      "width": 47,
+      "height": 133
+    },
+    "sourceColumn": 52,
+    "confidence": 0.9,
+    "needsReview": false,
+    "region": "截图 2025-11-02 14-53-28.png",
+    "regionIndex": 1
+  },
+  {
+    "name": "四〇〇円",
+    "price": 180,
+    "rawText": "四〇〇円 一八〇円",
+    "bbox": {
+      "x": 340,
+      "y": 201,
+      "width": 30,
+      "height": 116
+    },
+    "sourceColumn": 340,
+    "confidence": 0.9,
+    "needsReview": false,
+    "region": "截图 2025-11-02 14-53-28.png",
+    "regionIndex": 1
+  },
+  {
+    "name": "六〇〇",
+    "price": 750,
+    "rawText": "六〇〇 七五〇円",
+    "bbox": {
+      "x": 586,
+      "y": 200,
+      "width": 26,
+      "height": 90
+    },
+    "sourceColumn": 586,
+    "confidence": 0.9,
+    "needsReview": false,
+    "region": "截图 2025-11-02 14-53-28.png",
+    "regionIndex": 1
+  },
+  {
+    "name": "五〇〇円",
+    "price": 750,
+    "rawText": "・五〇〇円 七五〇円",
+    "bbox": {
+      "x": 623,
+      "y": 194,
+      "width": 29,
+      "height": 122
+    },
+    "sourceColumn": 623,
+    "confidence": 0.9,
+    "needsReview": false,
+    "region": "截图 2025-11-02 14-53-28.png",
+    "regionIndex": 1
+  },
+  {
+    "name": "四〇〇円",
+    "price": 350,
+    "rawText": "四〇〇円 三五〇円",
+    "bbox": {
+      "x": 810,
+      "y": 203,
+      "width": 39,
+      "height": 114
+    },
+    "sourceColumn": 810,
+    "confidence": 0.9,
+    "needsReview": false,
+    "region": "截图 2025-11-02 14-53-28.png",
+    "regionIndex": 1
+  },
+  {
+    "name": "四〇〇円",
+    "price": 350,
+    "rawText": "四〇〇円 三五〇円",
+    "bbox": {
+      "x": 848,
+      "y": 203,
+      "width": 40,
+      "height": 116
+    },
+    "sourceColumn": 848,
+    "confidence": 0.9,
+    "needsReview": false,
+    "region": "截图 2025-11-02 14-53-28.png",
+    "regionIndex": 1
+  },
+  {
+    "name": "お味噌汁",
+    "rawText": "お味噌汁 田舎トック",
+    "bbox": {
+      "x": 56,
+      "y": 12,
+      "width": 38,
+      "height": 91
+    },
+    "sourceColumn": 56,
+    "confidence": 0.5,
+    "needsReview": true,
+    "region": "截图 2025-11-02 14-53-28.png",
+    "regionIndex": 1
+  },
+  {
+    "name": "お茶漬:",
+    "rawText": "お茶漬: 焼おにぎり・・・",
+    "bbox": {
+      "x": 358,
+      "y": 14,
+      "width": 27,
+      "height": 80
+    },
+    "sourceColumn": 358,
+    "confidence": 0.5,
+    "needsReview": true,
+    "region": "截图 2025-11-02 14-53-28.png",
+    "regionIndex": 1
+  },
+  {
+    "name": "焼きおにバター…二〇〇円",
+    "rawText": "焼きおにバター…二〇〇円",
+    "bbox": {
+      "x": 380,
+      "y": 14,
+      "width": 43,
+      "height": 302
+    },
+    "sourceColumn": 380,
+    "confidence": 0.5,
+    "needsReview": true,
+    "region": "截图 2025-11-02 14-53-28.png",
+    "regionIndex": 1
+  },
+  {
+    "name": "チーズチヂミ",
+    "rawText": "チーズチヂミ・ ホルモン鉄板・",
+    "bbox": {
+      "x": 581,
+      "y": 19,
+      "width": 26,
+      "height": 137
+    },
+    "sourceColumn": 581,
+    "confidence": 0.5,
+    "needsReview": true,
+    "region": "截图 2025-11-02 14-53-28.png",
+    "regionIndex": 1
+  },
+  {
+    "name": "キムチ鉄板:",
+    "rawText": "キムチ鉄板: 地鶏の鉄板・",
+    "bbox": {
+      "x": 614,
+      "y": 21,
+      "width": 27,
+      "height": 121
+    },
+    "sourceColumn": 614,
+    "confidence": 0.5,
+    "needsReview": true,
+    "region": "截图 2025-11-02 14-53-28.png",
+    "regionIndex": 1
+  },
+  {
+    "name": "サツマバター",
+    "rawText": "サツマバター･･",
+    "bbox": {
+      "x": 786,
+      "y": 22,
+      "width": 44,
+      "height": 149
+    },
+    "sourceColumn": 786,
+    "confidence": 0.5,
+    "needsReview": true,
+    "region": "截图 2025-11-02 14-53-28.png",
+    "regionIndex": 1
+  },
+  {
+    "name": "ジャガバター",
+    "rawText": "ジャガバター・ コーンバター",
+    "bbox": {
+      "x": 822,
+      "y": 21,
+      "width": 43,
+      "height": 147
+    },
+    "sourceColumn": 822,
+    "confidence": 0.5,
+    "needsReview": true,
+    "region": "截图 2025-11-02 14-53-28.png",
+    "regionIndex": 1
+  },
+  {
+    "name": "とうふ鉄板",
+    "rawText": "とうふ鉄板 ナス鉄板:",
+    "bbox": {
+      "x": 854,
+      "y": 20,
+      "width": 43,
+      "height": 112
+    },
+    "sourceColumn": 854,
+    "confidence": 0.5,
+    "needsReview": true,
+    "region": "截图 2025-11-02 14-53-28.png",
+    "regionIndex": 1
+  },
+  {
+    "name": "〇〇円",
+    "price": 400,
+    "rawText": "・〇〇円 四〇〇円",
+    "bbox": {
+      "x": 8,
+      "y": 144,
+      "width": 39,
+      "height": 97
+    },
+    "sourceColumn": 8,
+    "confidence": 0.9,
+    "needsReview": false,
+    "region": "粘贴的图像.png",
+    "regionIndex": 2
+  },
+  {
+    "name": "スティック三五",
+    "price": 600,
+    "rawText": "スティック三五 六〇〇円",
+    "bbox": {
+      "x": 50,
+      "y": 59,
+      "width": 51,
+      "height": 141
+    },
+    "sourceColumn": 50,
+    "confidence": 0.9,
+    "needsReview": false,
+    "region": "粘贴的图像.png",
+    "regionIndex": 2
+  },
+  {
+    "name": "四〇〇円",
+    "price": 600,
+    "rawText": "・四〇〇円 六〇〇円",
+    "bbox": {
+      "x": 81,
+      "y": 145,
+      "width": 35,
+      "height": 97
+    },
+    "sourceColumn": 81,
+    "confidence": 0.9,
+    "needsReview": false,
+    "region": "粘贴的图像.png",
+    "regionIndex": 2
+  },
+  {
+    "name": "六〇〇円",
+    "price": 600,
+    "rawText": "六〇〇円 六〇〇円",
+    "bbox": {
+      "x": 220,
+      "y": 155,
+      "width": 31,
+      "height": 88
+    },
+    "sourceColumn": 220,
+    "confidence": 0.9,
+    "needsReview": false,
+    "region": "粘贴的图像.png",
+    "regionIndex": 2
+  },
+  {
+    "name": "つまスティック三五〇円",
+    "price": 400,
+    "rawText": "つまスティック三五〇円 四〇〇円",
+    "bbox": {
+      "x": 255,
+      "y": 36,
+      "width": 43,
+      "height": 207
+    },
+    "sourceColumn": 255,
+    "confidence": 0.9,
+    "needsReview": false,
+    "region": "粘贴的图像.png",
+    "regionIndex": 2
+  },
+  {
+    "name": "四〇〇円",
+    "price": 300,
+    "rawText": "・・四〇〇円 三〇〇円",
+    "bbox": {
+      "x": 484,
+      "y": 146,
+      "width": 21,
+      "height": 101
+    },
+    "sourceColumn": 484,
+    "confidence": 0.9,
+    "needsReview": false,
+    "region": "粘贴的图像.png",
+    "regionIndex": 2
+  },
+  {
+    "name": "地鶏のタタキ・・・・・・六〇〇円",
+    "price": 300,
+    "rawText": "地鶏のタタキ・・・・・・六〇〇円 三〇〇円",
+    "bbox": {
+      "x": 515,
+      "y": 26,
+      "width": 22,
+      "height": 222
+    },
+    "sourceColumn": 515,
+    "confidence": 0.9,
+    "needsReview": false,
+    "region": "粘贴的图像.png",
+    "regionIndex": 2
+  },
+  {
+    "name": "三〇〇円",
+    "price": 300,
+    "rawText": "・三〇〇円 三〇〇円",
+    "bbox": {
+      "x": 548,
+      "y": 156,
+      "width": 25,
+      "height": 93
+    },
+    "sourceColumn": 548,
+    "confidence": 0.9,
+    "needsReview": false,
+    "region": "粘贴的图像.png",
+    "regionIndex": 2
+  },
+  {
+    "name": "六五〇円",
+    "price": 300,
+    "rawText": "・六五〇円 三〇〇円",
+    "bbox": {
+      "x": 578,
+      "y": 157,
+      "width": 28,
+      "height": 93
+    },
+    "sourceColumn": 578,
+    "confidence": 0.9,
+    "needsReview": false,
+    "region": "粘贴的图像.png",
+    "regionIndex": 2
+  },
+  {
+    "name": "三〇〇円",
+    "price": 300,
+    "rawText": "三〇〇円 三〇〇円",
+    "bbox": {
+      "x": 613,
+      "y": 165,
+      "width": 24,
+      "height": 85
+    },
+    "sourceColumn": 613,
+    "confidence": 0.9,
+    "needsReview": false,
+    "region": "粘贴的图像.png",
+    "regionIndex": 2
+  },
+  {
+    "name": "湯どうふ(寄せ鍋風)七〇〇円",
+    "price": 300,
+    "rawText": "湯どうふ(寄せ鍋風)七〇〇円 三〇〇円",
+    "bbox": {
+      "x": 641,
+      "y": 26,
+      "width": 41,
+      "height": 227
+    },
+    "sourceColumn": 641,
+    "confidence": 0.9,
+    "needsReview": false,
+    "region": "粘贴的图像.png",
+    "regionIndex": 2
+  },
+  {
+    "name": "なっとうおろし三〇〇円",
+    "price": 300,
+    "rawText": "なっとうおろし三〇〇円 三〇〇円",
+    "bbox": {
+      "x": 671,
+      "y": 27,
+      "width": 46,
+      "height": 227
+    },
+    "sourceColumn": 671,
+    "confidence": 0.9,
+    "needsReview": false,
+    "region": "粘贴的图像.png",
+    "regionIndex": 2
+  },
+  {
+    "name": "トマトスライス三五〇円",
+    "price": 300,
+    "rawText": "トマトスライス三五〇円 三〇〇円",
+    "bbox": {
+      "x": 701,
+      "y": 25,
+      "width": 49,
+      "height": 228
+    },
+    "sourceColumn": 701,
+    "confidence": 0.9,
+    "needsReview": false,
+    "region": "粘贴的图像.png",
+    "regionIndex": 2
+  },
+  {
+    "name": "ポテトフライ",
+    "rawText": "ポテトフライ 鶏の唐揚(大)",
+    "bbox": {
+      "x": 36,
+      "y": 10,
+      "width": 40,
+      "height": 105
+    },
+    "sourceColumn": 36,
+    "confidence": 0.5,
+    "needsReview": true,
+    "region": "粘贴的图像.png",
+    "regionIndex": 2
+  },
+  {
+    "name": "チーズ",
+    "rawText": "チーズ 鶏の唐揚(大)",
+    "bbox": {
+      "x": 76,
+      "y": 10,
+      "width": 34,
+      "height": 55
+    },
+    "sourceColumn": 76,
+    "confidence": 0.5,
+    "needsReview": true,
+    "region": "粘贴的图像.png",
+    "regionIndex": 2
+  },
+  {
+    "name": "串カツ",
+    "rawText": "串カツ 鶏の唐揚(小)",
+    "bbox": {
+      "x": 113,
+      "y": 12,
+      "width": 27,
+      "height": 52
+    },
+    "sourceColumn": 113,
+    "confidence": 0.5,
+    "needsReview": true,
+    "region": "粘贴的图像.png",
+    "regionIndex": 2
+  },
+  {
+    "name": "ゲソの唐揚げ",
+    "rawText": "ゲソの唐揚げ 鶏の唐揚(小)",
+    "bbox": {
+      "x": 233,
+      "y": 15,
+      "width": 34,
+      "height": 102
+    },
+    "sourceColumn": 233,
+    "confidence": 0.5,
+    "needsReview": true,
+    "region": "粘贴的图像.png",
+    "regionIndex": 2
+  },
+  {
+    "name": "揚げぎんなん...三〇〇円",
+    "rawText": "揚げぎんなん...三〇〇円 鶏の唐揚(小)",
+    "bbox": {
+      "x": 291,
+      "y": 19,
+      "width": 40,
+      "height": 224
+    },
+    "sourceColumn": 291,
+    "confidence": 0.5,
+    "needsReview": true,
+    "region": "粘贴的图像.png",
+    "regionIndex": 2
+  },
+  {
+    "name": "タコワサビ",
+    "rawText": "タコワサビ 山芋スライス",
+    "bbox": {
+      "x": 483,
+      "y": 25,
+      "width": 21,
+      "height": 81
+    },
+    "sourceColumn": 483,
+    "confidence": 0.5,
+    "needsReview": true,
+    "region": "粘贴的图像.png",
+    "regionIndex": 2
+  },
+  {
+    "name": "もずく……………",
+    "rawText": "もずく…………… 山芋スライス",
+    "bbox": {
+      "x": 544,
+      "y": 25,
+      "width": 21,
+      "height": 81
+    },
+    "sourceColumn": 544,
+    "confidence": 0.5,
+    "needsReview": true,
+    "region": "粘贴的图像.png",
+    "regionIndex": 2
+  },
+  {
+    "name": "豚キムチ",
+    "rawText": "豚キムチ 冷奴.....",
+    "bbox": {
+      "x": 575,
+      "y": 26,
+      "width": 21,
+      "height": 65
+    },
+    "sourceColumn": 575,
+    "confidence": 0.5,
+    "needsReview": true,
+    "region": "粘贴的图像.png",
+    "regionIndex": 2
+  },
+  {
+    "name": "キムチ",
+    "rawText": "キムチ 冷奴.....",
+    "bbox": {
+      "x": 604,
+      "y": 26,
+      "width": 21,
+      "height": 49
+    },
+    "sourceColumn": 604,
+    "confidence": 0.5,
+    "needsReview": true,
+    "region": "粘贴的图像.png",
+    "regionIndex": 2
+  },
+  {
+    "name": "(冬季限定)",
+    "rawText": "(冬季限定) 山芋スライス",
+    "bbox": {
+      "x": 633,
+      "y": 95,
+      "width": 21,
+      "height": 66
+    },
+    "sourceColumn": 633,
+    "confidence": 0.5,
+    "needsReview": true,
+    "region": "粘贴的图像.png",
+    "regionIndex": 2
+  },
+  {
+    "name": "皮酢",
+    "rawText": "皮酢 冷奴.....",
+    "bbox": {
+      "x": 733,
+      "y": 27,
+      "width": 23,
+      "height": 53
+    },
+    "sourceColumn": 733,
+    "confidence": 0.5,
+    "needsReview": true,
+    "region": "粘贴的图像.png",
+    "regionIndex": 2
+  }
+]
