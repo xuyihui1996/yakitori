@@ -10,17 +10,7 @@
       "maxDuration": 30
     }
   },
-  "routes": [
-    {
-      "src": "/api/parse-menu",
-      "dest": "/api/parse-menu.ts"
-    }
-  ],
   "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
-    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
