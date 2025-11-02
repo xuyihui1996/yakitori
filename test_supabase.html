@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Supabase 连接测试</title>
+</head>
+<body>
+    <h1>Supabase 连接测试</h1>
+    <div id="result">测试中...</div>
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+        
+        const supabaseUrl = 'https://otxblfgqhqlvpzuoiroy.supabase.co'
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90eGJsZmdxaHFsdnB6dW9pcm95Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwMjQ2ODEsImV4cCI6MjA3NzYwMDY4MX0.bk9KVITO0B9ku3Mbw0YugyzUzjbhuCQmbWUCDT6zWe0'
+        
+        const supabase = createClient(supabaseUrl, supabaseKey)
+        const resultDiv = document.getElementById('result')
+        
+        async function test() {
+            try {
+                // 测试连接
+                const { data, error } = await supabase.from('users').select('count')
+                
+                if (error) {
+                    resultDiv.innerHTML = `❌ 错误: ${error.message}<br><br>详细信息:<br><pre>${JSON.stringify(error, null, 2)}</pre>`
+                } else {
+                    resultDiv.innerHTML = '✅ Supabase 连接成功！'
+                }
+            } catch (e) {
+                resultDiv.innerHTML = `❌ 异常: ${e.message}`
+            }
+        }
+        
+        test()
+    </script>
+</body>
+</html>

@@ -1,0 +1,313 @@
+/**
+ * 菜单选择器组件
+ * 展示共享菜单，允许快速点单
+ */
+
+import React, { useState, useMemo, useEffect } from 'react';
+import { Search, Info, Power, PowerOff, Plus, Minus } from 'lucide-react';
+import { GroupMenuItem, User, RoundItem } from '@/types';
+import { formatMoney } from '@/utils/money';
+
+interface MenuPickerProps {
+  menu: GroupMenuItem[];
+  members: User[];
+  currentUserId: string;
+  currentRoundItems: RoundItem[]; // 当前轮当前用户的订单项
+  onSelect: (item: GroupMenuItem, qty: number) => void;
+  onUpdateItemQty?: (itemId: string, newQty: number) => void;
+  onDeleteItem?: (itemId: string) => void;
+  disabled?: boolean;
+  isOwner?: boolean;
+  onToggleItemStatus?: (itemId: string, currentStatus: 'active' | 'disabled') => void;
+}
+
+export const MenuPicker: React.FC<MenuPickerProps> = ({
+  menu,
+  members,
+  currentUserId,
+  currentRoundItems,
+  onSelect,
+  onUpdateItemQty,
+  onDeleteItem,
+  disabled = false,
+  isOwner = false,
+  onToggleItemStatus
+}) => {
+  const [searchText, setSearchText] = useState('');
+  // 本地管理的数量状态（菜单项ID -> 数量）
+  const [localQuantities, setLocalQuantities] = useState<Record<string, number>>({});
+
+  // 初始化本地数量：从当前订单计算
+  useEffect(() => {
+    const initialQuantities: Record<string, number> = {};
+    
+    menu.forEach(menuItem => {
+      const matchingItems = currentRoundItems.filter(
+        orderItem => 
+          orderItem.nameDisplay === menuItem.nameDisplay &&
+          orderItem.price === menuItem.price &&
+          orderItem.userId === currentUserId &&
+          !orderItem.deleted
+      );
+      
+      if (matchingItems.length > 0) {
+        const totalQty = matchingItems.reduce((sum, item) => sum + item.qty, 0);
+        initialQuantities[menuItem.id] = totalQty;
+      } else {
+        initialQuantities[menuItem.id] = 0;
+      }
+    });
+    
+    setLocalQuantities(initialQuantities);
+  }, [menu, currentRoundItems, currentUserId]); // 只在菜单或订单变化时重新计算
+
+  // 过滤菜单
+  const filteredMenu = useMemo(() => {
+    if (!searchText.trim()) return menu;
+    
+    const search = searchText.toLowerCase();
+    return menu.filter(item => 
+      item.nameDisplay.toLowerCase().includes(search) ||
+      item.note?.toLowerCase().includes(search)
+    );
+  }, [menu, searchText]);
+
+  // 获取某个菜单项的本地数量
+  const getItemQty = (menuItemId: string): number => {
+    return localQuantities[menuItemId] || 0;
+  };
+
+  // 增加数量（仅更新本地状态）
+  const handleIncrease = (item: GroupMenuItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (item.status === 'disabled' || disabled) return;
+    
+    const currentQty = getItemQty(item.id);
+    setLocalQuantities({ ...localQuantities, [item.id]: currentQty + 1 });
+  };
+
+  // 减少数量（仅更新本地状态）
+  const handleDecrease = (item: GroupMenuItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (item.status === 'disabled' || disabled) return;
+    
+    const currentQty = getItemQty(item.id);
+    if (currentQty > 0) {
+      setLocalQuantities({ ...localQuantities, [item.id]: currentQty - 1 });
+    }
+  };
+
+  // 确认改动：应用所有本地改动到订单
+  const handleConfirmChanges = async () => {
+    if (disabled) return;
+
+    try {
+      // 遍历所有菜单项，应用改动
+      for (const menuItem of menu) {
+        const localQty = getItemQty(menuItem.id);
+        
+        // 找到当前订单中该菜单项的数量
+        const matchingItems = currentRoundItems.filter(
+          orderItem => 
+            orderItem.nameDisplay === menuItem.nameDisplay &&
+            orderItem.price === menuItem.price &&
+            orderItem.userId === currentUserId &&
+            !orderItem.deleted
+        );
+        const currentQty = matchingItems.reduce((sum, item) => sum + item.qty, 0);
+        
+        const diff = localQty - currentQty;
+        
+        if (diff > 0) {
+          // 需要增加：添加新订单项
+          for (let i = 0; i < diff; i++) {
+            await onSelect(menuItem, 1);
+          }
+        } else if (diff < 0) {
+          // 需要减少：更新或删除现有订单项
+          const toRemove = Math.abs(diff);
+          let remainingToRemove = toRemove;
+          
+          // 按顺序处理订单项，直到满足减少数量
+          for (const orderItem of matchingItems) {
+            if (remainingToRemove <= 0) break;
+            
+            if (orderItem.qty > remainingToRemove && onUpdateItemQty) {
+              // 这个订单项的数量足够减少，只需要减少部分数量
+              await onUpdateItemQty(orderItem.id, orderItem.qty - remainingToRemove);
+              remainingToRemove = 0;
+            } else {
+              // 这个订单项的数量不够或正好，删除整个订单项
+              const itemQtyToRemove = orderItem.qty;
+              if (onDeleteItem) {
+                await onDeleteItem(orderItem.id);
+              }
+              remainingToRemove -= itemQtyToRemove;
+            }
+          }
+        }
+        // diff === 0 时不需要改动
+      }
+      
+      // 重新计算完成，无需 pendingChanges
+      
+    } catch (error) {
+      console.error('Failed to apply changes:', error);
+      alert('应用改动失败：' + (error as Error).message);
+    }
+  };
+
+  // 检查是否有改动待确认
+  const hasPendingChanges = useMemo(() => {
+    return menu.some(menuItem => {
+      const localQty = getItemQty(menuItem.id);
+      const matchingItems = currentRoundItems.filter(
+        orderItem => 
+          orderItem.nameDisplay === menuItem.nameDisplay &&
+          orderItem.price === menuItem.price &&
+          orderItem.userId === currentUserId &&
+          !orderItem.deleted
+      );
+      const currentQty = matchingItems.reduce((sum, item) => sum + item.qty, 0);
+      return localQty !== currentQty;
+    });
+  }, [menu, localQuantities, currentRoundItems, currentUserId]);
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm border">
+      {/* 搜索框 */}
+      <div className="p-3 border-b">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+          <input
+            type="text"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            placeholder="搜索菜品..."
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+        </div>
+      </div>
+
+      {/* 菜单列表 */}
+      <div className="max-h-96 overflow-y-auto">
+        {filteredMenu.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">
+            {searchText ? '未找到匹配的菜品' : '暂无菜品，请先添加'}
+          </div>
+        ) : (
+          <div className="divide-y">
+            {filteredMenu.map((item) => {
+              const itemQty = getItemQty(item.id);
+              
+              return (
+                <div
+                  key={item.id}
+                  className={`p-3 transition-colors ${
+                    item.status === 'disabled' || disabled
+                      ? 'opacity-50'
+                      : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2">
+                        <h4 className="font-medium text-gray-900">{item.nameDisplay}</h4>
+                        {item.status === 'disabled' && (
+                          <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">
+                            已停售
+                          </span>
+                        )}
+                      </div>
+                      {item.note && (
+                        <p className="text-sm text-gray-500 mt-0.5">{item.note}</p>
+                      )}
+                      <p className="text-xs text-gray-400 mt-1">
+                        由 {members.find(m => m.id === item.createdBy)?.name || item.createdBy} 添加
+                      </p>
+                      
+                      {/* 数量加减按钮：放在每条item下方 */}
+                      {!disabled && item.status !== 'disabled' && (
+                        <div className="flex items-center space-x-3 mt-2">
+                          <button
+                            onClick={(e) => handleDecrease(item, e)}
+                            disabled={itemQty <= 0}
+                            className="flex items-center justify-center w-8 h-8 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            title="减少"
+                          >
+                            <Minus size={16} className="text-gray-600" />
+                          </button>
+                          <span className="text-sm font-medium text-gray-700 min-w-[2rem] text-center">
+                            {itemQty}
+                          </span>
+                          <button
+                            onClick={(e) => handleIncrease(item, e)}
+                            className="flex items-center justify-center w-8 h-8 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                            title="增加"
+                          >
+                            <Plus size={16} className="text-gray-600" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="text-right">
+                        <p className="font-semibold text-primary-600">
+                          {formatMoney(item.price)}
+                        </p>
+                      </div>
+                      {/* Owner停售/启用按钮 */}
+                      {isOwner && onToggleItemStatus && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleItemStatus(item.id, item.status);
+                          }}
+                          className={`p-2 rounded-lg transition-colors ${
+                            item.status === 'disabled'
+                              ? 'text-green-600 hover:bg-green-50'
+                              : 'text-red-600 hover:bg-red-50'
+                          }`}
+                          title={item.status === 'disabled' ? '启用' : '停售'}
+                        >
+                          {item.status === 'disabled' ? (
+                            <Power size={18} />
+                          ) : (
+                            <PowerOff size={18} />
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* 确认改动按钮 */}
+      {!disabled && hasPendingChanges && (
+        <div className="p-3 border-t bg-primary-50">
+          <button
+            onClick={handleConfirmChanges}
+            className="w-full py-3 px-4 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium transition-colors"
+          >
+            确认改动
+          </button>
+        </div>
+      )}
+
+      {/* 提示信息 */}
+      {disabled && (
+        <div className="p-3 border-t bg-yellow-50 flex items-start space-x-2">
+          <Info size={16} className="text-yellow-600 mt-0.5 flex-shrink-0" />
+          <p className="text-xs text-yellow-700">
+            当前轮次已关闭或您没有权限操作
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+

@@ -1,0 +1,31 @@
+.
+├── 使用说明.md
+├── DEPLOYMENT.md
+├── FEATURES.md
+├── index.html
+├── package.json
+├── package-lock.json
+├── postcss.config.js
+├── project_structure.txt
+├── PROJECT_SUMMARY.md
+├── public
+│   └── vite.svg
+├── QUICKSTART.md
+├── README.md
+├── src
+│   ├── api
+│   ├── App.tsx
+│   ├── components
+│   ├── index.css
+│   ├── main.tsx
+│   ├── pages
+│   ├── store
+│   ├── types
+│   ├── utils
+│   └── vite-env.d.ts
+├── tailwind.config.js
+├── tsconfig.json
+├── tsconfig.node.json
+└── vite.config.ts
+
+9 directories, 20 files
