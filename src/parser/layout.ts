@@ -77,7 +77,7 @@ export function normalizeGoogleVisionResponse(
               let wordText = '';
               if (word.symbols) {
                 wordText = word.symbols
-                  .map((s: { text?: string }) => s.text || '')
+                  .map(s => s.text || '')
                   .join('');
               }
 

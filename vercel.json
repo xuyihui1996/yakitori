@@ -4,12 +4,6 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "vite",
-  "functions": {
-    "api/parse-menu.ts": {
-      "memory": 1024,
-      "maxDuration": 30
-    }
-  },
   "rewrites": [
     {
       "source": "/(.*)",
@@ -17,3 +11,4 @@
     }
   ]
 }
+

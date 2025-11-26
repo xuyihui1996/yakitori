@@ -6,7 +6,7 @@
  */
 
 import type { OcrBlock } from '../types/ocr';
-import { getBlockCenterX } from './layoutV2';
+import { getBlockCenterX, getBlockCenterY } from './layoutV2';
 
 /**
  * 判断两个 block 是否在同一竖列

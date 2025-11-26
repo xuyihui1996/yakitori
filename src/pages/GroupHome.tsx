@@ -5,11 +5,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Users, Receipt, Settings, PlayCircle, CheckCircle, Scan } from 'lucide-react';
+import { Plus, Users, Receipt, Settings, PlayCircle, CheckCircle } from 'lucide-react';
 import { useGroupStore } from '@/store/groupStore';
 import { ItemInput } from '@/components/ItemInput';
 import { MenuPicker } from '@/components/MenuPicker';
-import { MenuScanner } from '@/components/MenuScanner';
 import { RoundTabs } from '@/components/RoundTabs';
 import { OwnerSummary } from '@/components/OwnerSummary';
 import { CheckoutConfirmModal } from '@/components/CheckoutConfirmModal';
@@ -51,7 +50,6 @@ export const GroupHome: React.FC = () => {
   } = useGroupStore();
 
   const [showItemInput, setShowItemInput] = useState(false);
-  const [showMenuScanner, setShowMenuScanner] = useState(false);
   const [showOwnerView, setShowOwnerView] = useState(false);
   const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
   const [showSaveMenuModal, setShowSaveMenuModal] = useState(false);
@@ -147,53 +145,6 @@ export const GroupHome: React.FC = () => {
   }, [currentGroup?.id, currentUser?.id, currentGroup?.ownerId, currentGroup?.settled, getUserRestaurantMenus]);
 
   const isOwner = currentUser?.id === currentGroup?.ownerId;
-
-  // 处理批量添加菜品（从扫描结果）
-  const handleBatchAddMenuItems = async (
-    items: Array<{ name: string; price: number; note?: string }>
-  ) => {
-    let successCount = 0;
-    let failCount = 0;
-
-    for (const item of items) {
-      try {
-        const result = await addMenuItem({
-          nameDisplay: item.name,
-          price: item.price,
-          note: item.note,
-          status: 'active',
-        });
-
-        if (result.success && currentRound) {
-          // 如果添加菜单项成功，自动为当前用户添加一份订单
-          await addOrderItem({
-            nameDisplay: item.name,
-            price: item.price,
-            qty: 1,
-            note: item.note,
-          });
-          successCount++;
-        } else if (result.conflict && result.conflict.existingItem) {
-          // 如果菜品已存在，直接添加订单
-          if (currentRound) {
-            await addOrderItem({
-              nameDisplay: item.name,
-              price: result.conflict.existingItem.price,
-              qty: 1,
-              note: item.note || result.conflict.existingItem.note,
-            });
-            successCount++;
-          }
-        }
-      } catch (error) {
-        console.error(`Failed to add item ${item.name}:`, error);
-        failCount++;
-      }
-    }
-
-    alert(`成功添加 ${successCount} 项${failCount > 0 ? `，失败 ${failCount} 项` : ''}`);
-    setShowMenuScanner(false);
-  };
 
   // 处理添加菜品
   const handleAddMenuItem = async (item: {
@@ -594,22 +545,13 @@ export const GroupHome: React.FC = () => {
                   <h2 className="text-lg font-semibold text-gray-800">
                     点单区
                   </h2>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => setShowMenuScanner(true)}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center space-x-2"
-                    >
-                      <Scan size={18} />
-                      <span>扫描菜单</span>
-                    </button>
-                    <button
-                      onClick={() => setShowItemInput(!showItemInput)}
-                      className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium flex items-center space-x-2"
-                    >
-                      <Plus size={18} />
-                      <span>手动添加</span>
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => setShowItemInput(!showItemInput)}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium flex items-center space-x-2"
+                  >
+                    <Plus size={18} />
+                    <span>新建菜品</span>
+                  </button>
                 </div>
 
                 {showItemInput && (
@@ -727,14 +669,6 @@ export const GroupHome: React.FC = () => {
           </>
         )}
       </div>
-
-      {/* 菜单扫描弹窗 */}
-      {showMenuScanner && (
-        <MenuScanner
-          onConfirm={handleBatchAddMenuItems}
-          onCancel={() => setShowMenuScanner(false)}
-        />
-      )}
 
       {/* 结账确认弹窗 */}
       {showCheckoutConfirm && currentUser && currentGroup && (

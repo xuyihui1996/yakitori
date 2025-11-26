@@ -17,14 +17,14 @@
  */
 
 import { runOcrOnImage } from '../ocr/googleVision';
-// import { normalizeGoogleVisionResponse } from './layout';
+import { normalizeGoogleVisionResponse } from './layout';
 import { normalizeGoogleVisionResponseV2 } from './layoutV2';
-// import { groupBlocksIntoColumns } from './columnGrouping';
+import { groupBlocksIntoColumns } from './columnGrouping';
 import { groupWordsIntoColumns, mergeCloseColumns } from './columnGroupingV2';
-import { mergeVerticalWords } from './verticalMerger';
+import { mergeVerticalWords, filterShortItems } from './verticalMerger';
 import { parseMenuLine } from './lineToMenuItem';
 import { classifyColumns, separateNameAndPriceColumns } from './columnClassifier';
-// import { matchMultipleColumns } from './matchNameAndPrice';
+import { matchMultipleColumns } from './matchNameAndPrice';
 import { matchMultipleColumnsV2 } from './matchNameAndPriceV2';
 import { filterNoiseBlocks, isTitleBlock } from './noiseFilter';
 import type { OcrInput, DetectedMenuItem, ParseMenuOptions } from '../types/ocr';
@@ -59,7 +59,7 @@ export async function parseMenuImageToItems(
   const {
     languageHints = ['ja'],
     maxColumns = 10,
-    maxColumnGap: _maxColumnGap = 8, // 保留以备将来使用
+    maxColumnGap = 8,
   } = options;
 
   try {
