@@ -12,6 +12,8 @@ import { MenuPicker } from '@/components/MenuPicker';
 import { RoundTabs } from '@/components/RoundTabs';
 import { OwnerSummary } from '@/components/OwnerSummary';
 import { CheckoutConfirmModal } from '@/components/CheckoutConfirmModal';
+import { SaveRestaurantMenuModal } from '@/components/SaveRestaurantMenuModal';
+import { ImportRestaurantMenuModal } from '@/components/ImportRestaurantMenuModal';
 import { GroupMenuItem } from '@/types';
 import { getRoundDisplayId } from '@/utils/format';
 import * as api from '@/api/supabaseService';
@@ -30,6 +32,7 @@ export const GroupHome: React.FC = () => {
     loadMenu,
     addMenuItem,
     updateMenuItemPrice,
+    updateMenuItemName,
     addOrderItem,
     deleteOrderItem,
     updateOrderItem,
@@ -40,12 +43,22 @@ export const GroupHome: React.FC = () => {
     finalizeCheckout,
     removeMember,
     loadRounds,
-    loadAllRoundItems
+    loadAllRoundItems,
+    saveGroupAsRestaurantMenu,
+    getUserRestaurantMenus,
+    importRestaurantMenuToGroup
   } = useGroupStore();
 
   const [showItemInput, setShowItemInput] = useState(false);
   const [showOwnerView, setShowOwnerView] = useState(false);
   const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
+  const [showSaveMenuModal, setShowSaveMenuModal] = useState(false);
+  const [showImportMenuModal, setShowImportMenuModal] = useState(false);
+  const [restaurantMenus, setRestaurantMenus] = useState<Array<{
+    link: import('@/types').UserRestaurantMenuLink;
+    menu: import('@/types').RestaurantMenu;
+    items: import('@/types').RestaurantMenuItem[];
+  }>>([]);
 
   // 加载组数据
   useEffect(() => {
@@ -78,6 +91,58 @@ export const GroupHome: React.FC = () => {
       loadGroup(groupId);
     }
   }, []);
+
+  // 检查是否需要显示导入历史菜单弹窗（仅 Owner 且首次进入）
+  useEffect(() => {
+    const checkAndShowImportMenu = async () => {
+      // 只在以下条件满足时显示：
+      // 1. 是 Owner
+      // 2. 有当前组
+      // 3. 组未结账
+      // 4. 还没有显示过导入弹窗（使用 localStorage 记录）
+      if (!currentUser || !currentGroup) {
+        return;
+      }
+      
+      const isOwner = currentUser.id === currentGroup.ownerId;
+      if (!isOwner) {
+        return;
+      }
+      
+      if (currentGroup.settled) {
+        return;
+      }
+      
+      // 检查是否已经显示过导入弹窗（使用 groupId 作为 key）
+      const importMenuKey = `import_menu_shown_${currentGroup.id}`;
+      const hasShown = localStorage.getItem(importMenuKey);
+      if (hasShown) {
+        return;
+      }
+      
+      try {
+        const menus = await getUserRestaurantMenus();
+        if (menus.length > 0) {
+          setRestaurantMenus(menus);
+          setShowImportMenuModal(true);
+          // 标记已显示过（即使用户跳过，也记录）
+          localStorage.setItem(importMenuKey, 'true');
+        }
+      } catch (error) {
+        console.error('获取历史菜单失败:', error);
+        // 不影响正常流程
+      }
+    };
+
+    // 等待组和用户数据加载完成后再检查
+    if (currentGroup && currentUser) {
+      // 延迟一点，确保数据已经加载
+      const timer = setTimeout(() => {
+        checkAndShowImportMenu();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [currentGroup?.id, currentUser?.id, currentGroup?.ownerId, currentGroup?.settled, getUserRestaurantMenus]);
 
   const isOwner = currentUser?.id === currentGroup?.ownerId;
 
@@ -174,7 +239,13 @@ export const GroupHome: React.FC = () => {
   // 从菜单选择并添加到订单
   const handleSelectFromMenu = async (menuItem: GroupMenuItem, qty: number) => {
     if (!currentRound) {
-      alert('当前没有进行中的轮次');
+      // 不显示 alert，直接返回（因为 disabled 状态已经提示了）
+      return;
+    }
+
+    // 检查轮次状态
+    if (currentRound.status !== 'open') {
+      // 轮次已关闭，不显示 alert（避免重复提示），直接返回
       return;
     }
 
@@ -186,7 +257,9 @@ export const GroupHome: React.FC = () => {
         note: menuItem.note
       });
     } catch (error) {
-      alert((error as Error).message);
+      // 错误已经在 API 层处理，这里不再重复显示 alert
+      // 避免在 handleConfirmChanges 的循环中重复弹出
+      throw error; // 重新抛出，让调用方决定是否显示错误
     }
   };
 
@@ -247,6 +320,21 @@ export const GroupHome: React.FC = () => {
     try {
       await finalizeCheckout();
       alert('结账完成！');
+      
+      // 重新加载组数据
+      if (currentGroup) {
+        await loadGroup(currentGroup.id);
+      }
+      
+      // 显示保存菜单弹窗（只显示一次，使用 localStorage 记录）
+      if (currentGroup && currentUser) {
+        const saveMenuKey = `save_menu_${currentGroup.id}_${currentUser.id}`;
+        const hasShown = localStorage.getItem(saveMenuKey);
+        if (!hasShown) {
+          setShowSaveMenuModal(true);
+          localStorage.setItem(saveMenuKey, 'true');
+        }
+      }
     } catch (error) {
       alert((error as Error).message);
     }
@@ -398,16 +486,6 @@ export const GroupHome: React.FC = () => {
             <div className="bg-white rounded-lg shadow-sm border p-4 space-y-3">
               <h3 className="font-semibold text-gray-800 mb-3">轮次管理</h3>
               
-              {currentRound && !currentGroup.settled && (
-                <button
-                  onClick={handleCloseRound}
-                  className="w-full py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium flex items-center justify-center space-x-2"
-                >
-                  <StopCircle size={20} />
-                  <span>关闭当前轮次</span>
-                </button>
-              )}
-
               {!currentRound && !currentGroup.settled && (
                 <button
                   onClick={handleStartNewRound}
@@ -515,6 +593,12 @@ export const GroupHome: React.FC = () => {
                     }
                     await loadMenu();
                   }}
+                  onUpdateItemName={async (menuItemId, newName) => {
+                    await updateMenuItemName(menuItemId, newName);
+                  }}
+                  onCloseRound={isOwner && currentRound && !currentGroup.settled ? handleCloseRound : undefined}
+                  hasCurrentRound={!!currentRound}
+                  isSettled={currentGroup.settled}
                 />
               </div>
             )}
@@ -599,6 +683,38 @@ export const GroupHome: React.FC = () => {
           onUpdateExtraItem={handleUpdateExtraItem}
           onDeleteExtraItem={handleDeleteExtraItem}
           disabled={currentGroup.settled}
+        />
+      )}
+
+      {/* 保存为店铺菜单弹窗 */}
+      {showSaveMenuModal && currentUser && currentGroup && (
+        <SaveRestaurantMenuModal
+          isOpen={showSaveMenuModal}
+          onSave={async (displayName) => {
+            try {
+              await saveGroupAsRestaurantMenu(displayName);
+              setShowSaveMenuModal(false);
+              alert('店铺菜单保存成功！');
+            } catch (error) {
+              alert('保存失败：' + (error as Error).message);
+            }
+          }}
+          onSkip={() => setShowSaveMenuModal(false)}
+        />
+      )}
+
+      {/* 导入历史菜单弹窗 */}
+      {showImportMenuModal && currentGroup && currentUser && restaurantMenus.length > 0 && (
+        <ImportRestaurantMenuModal
+          isOpen={showImportMenuModal}
+          menus={restaurantMenus}
+          onImport={async (restaurantMenuId) => {
+            const result = await importRestaurantMenuToGroup(restaurantMenuId);
+            // 重新加载菜单
+            await loadMenu();
+            return result;
+          }}
+          onSkip={() => setShowImportMenuModal(false)}
         />
       )}
     </div>

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Info, Power, PowerOff, Plus, Minus } from 'lucide-react';
+import { Search, Info, Power, PowerOff, Plus, Minus, StopCircle, Edit2, X, Check } from 'lucide-react';
 import { GroupMenuItem, User, RoundItem } from '@/types';
 import { formatMoney } from '@/utils/money';
 
@@ -19,6 +19,10 @@ interface MenuPickerProps {
   disabled?: boolean;
   isOwner?: boolean;
   onToggleItemStatus?: (itemId: string, currentStatus: 'active' | 'disabled') => void;
+  onUpdateItemName?: (menuItemId: string, newName: string) => Promise<void>;
+  onCloseRound?: () => void;
+  hasCurrentRound?: boolean;
+  isSettled?: boolean;
 }
 
 export const MenuPicker: React.FC<MenuPickerProps> = ({
@@ -31,11 +35,55 @@ export const MenuPicker: React.FC<MenuPickerProps> = ({
   onDeleteItem,
   disabled = false,
   isOwner = false,
-  onToggleItemStatus
+  onToggleItemStatus,
+  onUpdateItemName,
+  onCloseRound,
+  hasCurrentRound = false,
+  isSettled = false
 }) => {
   const [searchText, setSearchText] = useState('');
   // 本地管理的数量状态（菜单项ID -> 数量）
   const [localQuantities, setLocalQuantities] = useState<Record<string, number>>({});
+  // 编辑状态（菜单项ID -> 编辑中的新名称）
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState<string>('');
+  const [renaming, setRenaming] = useState(false);
+
+  // 处理保存改名
+  const handleSaveName = async (itemId: string) => {
+    if (!onUpdateItemName || !editingName.trim()) {
+      setEditingItemId(null);
+      setEditingName('');
+      return;
+    }
+
+    const trimmedName = editingName.trim();
+    if (trimmedName === menu.find(m => m.id === itemId)?.nameDisplay) {
+      // 名称未改变，直接取消编辑
+      setEditingItemId(null);
+      setEditingName('');
+      return;
+    }
+
+    setRenaming(true);
+    try {
+      await onUpdateItemName(itemId, trimmedName);
+      setEditingItemId(null);
+      setEditingName('');
+    } catch (error: any) {
+      if (error.status === 409) {
+        // 菜名冲突
+        const existingItem = error.existingItem;
+        alert(`菜名已存在，请重新命名\n\n已存在的菜品：${existingItem?.nameDisplay} (¥${existingItem?.price})`);
+      } else if (error.status === 403) {
+        alert(error.message || '该桌已结账，无法修改菜名');
+      } else {
+        alert(error.message || '修改菜名失败');
+      }
+    } finally {
+      setRenaming(false);
+    }
+  };
 
   // 初始化本地数量：从当前订单计算
   useEffect(() => {
@@ -99,7 +147,10 @@ export const MenuPicker: React.FC<MenuPickerProps> = ({
 
   // 确认改动：应用所有本地改动到订单
   const handleConfirmChanges = async () => {
-    if (disabled) return;
+    if (disabled) {
+      // 如果已禁用（轮次关闭），直接返回，不显示错误
+      return;
+    }
 
     try {
       // 遍历所有菜单项，应用改动
@@ -121,7 +172,18 @@ export const MenuPicker: React.FC<MenuPickerProps> = ({
         if (diff > 0) {
           // 需要增加：添加新订单项
           for (let i = 0; i < diff; i++) {
-            await onSelect(menuItem, 1);
+            try {
+              await onSelect(menuItem, 1);
+            } catch (error) {
+              // 如果是因为轮次关闭导致的错误，只显示一次提示并停止处理
+              const errorMessage = (error as Error).message;
+              if (errorMessage.includes('轮次已关闭') || errorMessage.includes('无法添加订单')) {
+                alert(errorMessage);
+                return; // 直接返回，不再处理后续项
+              }
+              // 其他错误继续抛出
+              throw error;
+            }
           }
         } else if (diff < 0) {
           // 需要减少：更新或删除现有订单项
@@ -134,13 +196,31 @@ export const MenuPicker: React.FC<MenuPickerProps> = ({
             
             if (orderItem.qty > remainingToRemove && onUpdateItemQty) {
               // 这个订单项的数量足够减少，只需要减少部分数量
-              await onUpdateItemQty(orderItem.id, orderItem.qty - remainingToRemove);
+              try {
+                await onUpdateItemQty(orderItem.id, orderItem.qty - remainingToRemove);
+              } catch (error) {
+                const errorMessage = (error as Error).message;
+                if (errorMessage.includes('轮次已关闭') || errorMessage.includes('无法添加订单')) {
+                  alert(errorMessage);
+                  return;
+                }
+                throw error;
+              }
               remainingToRemove = 0;
             } else {
               // 这个订单项的数量不够或正好，删除整个订单项
               const itemQtyToRemove = orderItem.qty;
               if (onDeleteItem) {
-                await onDeleteItem(orderItem.id);
+                try {
+                  await onDeleteItem(orderItem.id);
+                } catch (error) {
+                  const errorMessage = (error as Error).message;
+                  if (errorMessage.includes('轮次已关闭') || errorMessage.includes('无法添加订单')) {
+                    alert(errorMessage);
+                    return;
+                  }
+                  throw error;
+                }
               }
               remainingToRemove -= itemQtyToRemove;
             }
@@ -153,7 +233,11 @@ export const MenuPicker: React.FC<MenuPickerProps> = ({
       
     } catch (error) {
       console.error('Failed to apply changes:', error);
-      alert('应用改动失败：' + (error as Error).message);
+      const errorMessage = (error as Error).message;
+      // 如果错误信息中不包含轮次关闭的提示，才显示通用错误
+      if (!errorMessage.includes('轮次已关闭') && !errorMessage.includes('无法添加订单')) {
+        alert('应用改动失败：' + errorMessage);
+      }
     }
   };
 
@@ -212,11 +296,67 @@ export const MenuPicker: React.FC<MenuPickerProps> = ({
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <div className="flex items-center space-x-2">
-                        <h4 className="font-medium text-gray-900">{item.nameDisplay}</h4>
-                        {item.status === 'disabled' && (
-                          <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">
-                            已停售
-                          </span>
+                        {editingItemId === item.id ? (
+                          <div className="flex items-center space-x-2 flex-1">
+                            <input
+                              type="text"
+                              value={editingName}
+                              onChange={(e) => setEditingName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleSaveName(item.id);
+                                } else if (e.key === 'Escape') {
+                                  setEditingItemId(null);
+                                  setEditingName('');
+                                }
+                              }}
+                              className="flex-1 px-2 py-1 border border-primary-500 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                              autoFocus
+                              disabled={renaming}
+                            />
+                            <button
+                              onClick={() => handleSaveName(item.id)}
+                              disabled={renaming}
+                              className="p-1 text-green-600 hover:bg-green-50 rounded disabled:opacity-50"
+                              title="保存"
+                            >
+                              <Check size={16} />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingItemId(null);
+                                setEditingName('');
+                              }}
+                              disabled={renaming}
+                              className="p-1 text-gray-600 hover:bg-gray-50 rounded disabled:opacity-50"
+                              title="取消"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <h4 className="font-medium text-gray-900">{item.nameDisplay}</h4>
+                            {/* 改名按钮（全员可见，但已结账时禁用） */}
+                            {!isSettled && onUpdateItemName && item.status === 'active' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingItemId(item.id);
+                                  setEditingName(item.nameDisplay);
+                                }}
+                                className="p-1 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors"
+                                title="改名"
+                              >
+                                <Edit2 size={14} />
+                              </button>
+                            )}
+                            {item.status === 'disabled' && (
+                              <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">
+                                已停售
+                              </span>
+                            )}
+                          </>
                         )}
                       </div>
                       {item.note && (
@@ -294,6 +434,19 @@ export const MenuPicker: React.FC<MenuPickerProps> = ({
             className="w-full py-3 px-4 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium transition-colors"
           >
             确认改动
+          </button>
+        </div>
+      )}
+
+      {/* 结束当前轮次按钮 */}
+      {onCloseRound && hasCurrentRound && !isSettled && (
+        <div className="p-3 border-t">
+          <button
+            onClick={onCloseRound}
+            className="w-full py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium flex items-center justify-center space-x-2"
+          >
+            <StopCircle size={20} />
+            <span>结束当前轮次</span>
           </button>
         </div>
       )}

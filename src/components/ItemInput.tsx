@@ -103,7 +103,7 @@ export const ItemInput: React.FC<ItemInputProps> = ({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              价格 (¥) *
+              价格 (¥) * <span className="text-xs text-gray-500 font-normal">（含税价格）</span>
             </label>
             <input
               type="number"
