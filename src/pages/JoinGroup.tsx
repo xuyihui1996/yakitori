@@ -12,7 +12,13 @@ import { generateQRCodeDataURL, generateJoinLink } from '@/utils/qrcode';
 export const JoinGroup: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { createGroup, joinGroup, currentUser, currentGroup, loadGroup } = useGroupStore();
+  const { 
+    createGroup, 
+    joinGroup, 
+    currentUser, 
+    currentGroup, 
+    loadGroup
+  } = useGroupStore();
 
   const [mode, setMode] = useState<'create' | 'join'>('create');
   const [name, setName] = useState('');
@@ -27,7 +33,6 @@ export const JoinGroup: React.FC = () => {
   useEffect(() => {
     const urlGroupId = searchParams.get('groupId');
     if (urlGroupId) {
-      console.log('检测到URL参数groupId:', urlGroupId);
       setMode('join');
       setGroupId(urlGroupId.toUpperCase());
       // 清除可能存在的旧状态，防止干扰
@@ -42,13 +47,11 @@ export const JoinGroup: React.FC = () => {
     // 如果URL中有groupId参数，说明是通过链接打开的，不自动跳转
     const urlGroupId = searchParams.get('groupId');
     if (urlGroupId) {
-      console.log('检测到URL参数groupId，不自动跳转，等待用户加入');
       return;
     }
     
     // 如果正在显示二维码弹窗，不自动跳转
     if (createdGroupId || sessionStorage.getItem('showing_qr_code') === 'true') {
-      console.log('阻止自动跳转：正在显示二维码弹窗');
       return;
     }
     
@@ -81,19 +84,6 @@ export const JoinGroup: React.FC = () => {
     }
   }, [currentUser, currentGroup, loadGroup, navigate, createdGroupId, searchParams]);
 
-  // 调试：监听状态变化
-  useEffect(() => {
-    if (createdGroupId) {
-      console.log('createdGroupId已设置:', createdGroupId);
-    }
-  }, [createdGroupId]);
-
-  useEffect(() => {
-    if (qrCodeUrl) {
-      console.log('qrCodeUrl已更新，长度:', qrCodeUrl.length);
-      console.log('qrCodeUrl前50字符:', qrCodeUrl.substring(0, 50));
-    }
-  }, [qrCodeUrl]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,19 +104,11 @@ export const JoinGroup: React.FC = () => {
       
       // 设置状态，触发弹窗显示
       setCreatedGroupId(group.id);
-      console.log('已设置createdGroupId:', group.id);
       
       // 生成二维码（异步，不阻塞）
       generateQRCodeDataURL(generateJoinLink(group.id))
         .then((qrCode) => {
-          console.log('二维码生成成功，长度:', qrCode.length);
-          console.log('二维码URL前100字符:', qrCode.substring(0, 100));
           setQrCodeUrl(qrCode);
-          console.log('已设置qrCodeUrl状态');
-          // 验证状态已设置
-          setTimeout(() => {
-            console.log('验证：createdGroupId=', document.querySelector('[data-testid="qr-modal"]') ? '弹窗已渲染' : '弹窗未渲染');
-          }, 100);
         })
         .catch((qrError) => {
           console.error('二维码生成失败:', qrError);
@@ -319,7 +301,6 @@ export const JoinGroup: React.FC = () => {
           style={{ zIndex: 9999 }}
           ref={(el) => {
             if (el) {
-              console.log('✅ 二维码弹窗已渲染到DOM');
             }
           }}
           onClick={() => {
@@ -375,20 +356,8 @@ export const JoinGroup: React.FC = () => {
                         display: 'block',
                         zIndex: 1
                       }}
-                      onLoad={() => {
-                        console.log('✅ 二维码图片加载成功');
-                        const img = document.querySelector('img[alt="Join QR Code"]');
-                        console.log('图片元素:', img);
-                        console.log('图片尺寸:', img?.getBoundingClientRect());
-                      }}
                       onError={(e) => {
-                        console.error('❌ 二维码图片加载失败', e);
-                        console.log('qrCodeUrl状态:', qrCodeUrl ? `有值(${qrCodeUrl.length}字符)` : '无值');
-                        if (qrCodeUrl) {
-                          console.log('二维码URL前100字符:', qrCodeUrl.substring(0, 100));
-                          console.log('二维码URL是否以data:开头:', qrCodeUrl.startsWith('data:'));
-                          console.log('二维码URL是否以data:image开头:', qrCodeUrl.startsWith('data:image'));
-                        }
+                        console.error('二维码图片加载失败', e);
                       }}
                     />
                   </>

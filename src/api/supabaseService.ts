@@ -32,6 +32,7 @@ import {
 import { generateShortId, generateUniqueId } from '@/utils/format';
 import { aggregateItemsByName } from '@/utils/export';
 import { calculateTotal } from '@/utils/money';
+import { normalizeDishName } from '@/utils/nameNormalize';
 
 // ============ 用户相关 ============
 
@@ -40,7 +41,39 @@ import { calculateTotal } from '@/utils/money';
  */
 export async function createUser(name: string): Promise<User> {
   const createUserClient = ensureSupabase();
-  const userId = generateUniqueId('U');
+  
+  // 检查 localStorage 中是否已有用户ID，如果有就复用（保持用户身份一致）
+  let userId = localStorage.getItem('ordered_user_id');
+  
+  if (userId) {
+    // 尝试从数据库获取现有用户
+    const { data: existingUser, error: fetchError } = await createUserClient
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    
+    if (existingUser && !fetchError) {
+      // 用户已存在，更新用户名（可能用户改了名字）
+      const { error: updateError } = await createUserClient
+        .from('users')
+        .update({ name })
+        .eq('id', userId);
+      
+      if (updateError) {
+        console.warn('Failed to update user name:', updateError);
+        // 不抛出错误，继续使用旧名字
+      }
+      
+      return {
+        id: existingUser.id,
+        name: existingUser.name,
+      };
+    }
+  } else {
+    // 没有保存的用户ID，生成新用户ID
+    userId = generateUniqueId('U');
+  }
   
   // 插入时使用数据库字段名（snake_case）
   const { error } = await createUserClient.from('users').insert([{
@@ -49,6 +82,22 @@ export async function createUser(name: string): Promise<User> {
   }]);
   
   if (error) {
+    // 如果是因为用户已存在（可能是并发创建），尝试获取现有用户
+    if (error.code === '23505' || error.message.includes('duplicate')) {
+      const { data: existingUser } = await createUserClient
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (existingUser) {
+        return {
+          id: existingUser.id,
+          name: existingUser.name,
+        };
+      }
+    }
+    
     console.error('Failed to create user:', error);
     throw new Error('创建用户失败: ' + error.message);
   }
@@ -326,15 +375,43 @@ export async function getMenu(groupId: string): Promise<GroupMenuItem[]> {
 }
 
 /**
- * 添加菜单项
+ * 添加菜单项（增强查重：同组内active状态菜名唯一）
  */
 export async function addMenuItem(
   item: Omit<GroupMenuItem, 'id' | 'createdAt'>
 ): Promise<GroupMenuItem> {
+  const normalizedName = normalizeDishName(item.nameDisplay);
+  
+  // 检查同组内是否已存在同名active菜品
+  const checkClient = ensureSupabase();
+  const { data: existingItems } = await checkClient
+    .from('group_menu_items')
+    .select('*')
+    .eq('group_id', item.groupId)
+    .eq('status', 'active')
+    .ilike('name_display', normalizedName);
+  
+  if (existingItems && existingItems.length > 0) {
+    const existing = existingItems[0];
+    const error: any = new Error('菜名已存在');
+    error.status = 409;
+    error.existingItem = {
+      id: existing.id,
+      groupId: existing.group_id,
+      nameDisplay: existing.name_display,
+      price: existing.price,
+      note: existing.note,
+      status: existing.status,
+      createdBy: existing.created_by,
+      createdAt: existing.created_at,
+    } as GroupMenuItem;
+    throw error;
+  }
+
   const newItem = {
     id: generateUniqueId('MI'),
     group_id: item.groupId,
-    name_display: item.nameDisplay,
+    name_display: normalizedName,
     price: item.price,
     note: item.note,
     status: item.status,
@@ -350,6 +427,12 @@ export async function addMenuItem(
     .single();
 
   if (error) {
+    // 如果是唯一约束冲突（数据库层面）
+    if (error.code === '23505') {
+      const errorWithStatus: any = new Error('菜名已存在');
+      errorWithStatus.status = 409;
+      throw errorWithStatus;
+    }
     console.error('Failed to add menu item:', error);
     throw new Error('添加菜品失败');
   }
@@ -367,7 +450,7 @@ export async function addMenuItem(
 }
 
 /**
- * 更新菜单项
+ * 更新菜单项（价格、状态等，不包括名称）
  */
 export async function updateMenuItem(
   itemId: string,
@@ -405,6 +488,125 @@ export async function updateMenuItem(
     createdAt: data.created_at,
     updatedAt: data.updated_at,
     updatedBy: data.updated_by,
+  } as GroupMenuItem;
+}
+
+/**
+ * 更新菜单项名称（全员可改，统一更新该组所有订单项名称）
+ */
+export async function updateMenuItemName(
+  groupId: string,
+  menuItemId: string,
+  newName: string,
+  userId: string
+): Promise<GroupMenuItem> {
+  const client = ensureSupabase();
+  
+  // 1. 校验组是否已结账
+  const { data: groupData, error: groupError } = await client
+    .from('groups')
+    .select('settled')
+    .eq('id', groupId)
+    .single();
+  
+  if (groupError || !groupData) {
+    throw new Error('组不存在');
+  }
+  
+  if (groupData.settled) {
+    const error: any = new Error('该桌已结账，无法修改菜名');
+    error.status = 403;
+    throw error;
+  }
+  
+  // 2. 规范化新名称
+  const normalizedName = normalizeDishName(newName);
+  
+  // 3. 检查冲突：同组内是否已有active的新名称（排除自己）
+  const { data: conflictItems } = await client
+    .from('group_menu_items')
+    .select('*')
+    .eq('group_id', groupId)
+    .eq('status', 'active')
+    .ilike('name_display', normalizedName)
+    .neq('id', menuItemId);
+  
+  if (conflictItems && conflictItems.length > 0) {
+    const existing = conflictItems[0];
+    const error: any = new Error('菜名已存在，请重新命名');
+    error.status = 409;
+    error.existingItem = {
+      id: existing.id,
+      groupId: existing.group_id,
+      nameDisplay: existing.name_display,
+      price: existing.price,
+      note: existing.note,
+      status: existing.status,
+      createdBy: existing.created_by,
+      createdAt: existing.created_at,
+    } as GroupMenuItem;
+    throw error;
+  }
+  
+  // 4. 更新菜单项名称
+  const now = new Date().toISOString();
+  const { data: updatedMenuItem, error: updateError } = await client
+    .from('group_menu_items')
+    .update({
+      name_display: normalizedName,
+      updated_at: now,
+      updated_by: userId
+    })
+    .eq('id', menuItemId)
+    .select()
+    .single();
+  
+  if (updateError) {
+    // 如果是唯一约束冲突（数据库层面）
+    if (updateError.code === '23505') {
+      const errorWithStatus: any = new Error('菜名已存在，请重新命名');
+      errorWithStatus.status = 409;
+      throw errorWithStatus;
+    }
+    // 如果是触发器拦截（已结账）
+    if (updateError.message?.includes('settled')) {
+      const errorWithStatus: any = new Error('该桌已结账，无法修改菜名');
+      errorWithStatus.status = 403;
+      throw errorWithStatus;
+    }
+    console.error('Failed to update menu item name:', updateError);
+    throw new Error('更新菜名失败');
+  }
+  
+  // 5. 统一回写该组内所有轮的订单项名称（未结账期间允许）
+  // 直接更新所有关联的订单项
+  const { error: updateItemsError } = await client
+    .from('round_items')
+    .update({
+      name_display: normalizedName,
+      updated_at: now,
+      updated_by: userId
+    })
+    .eq('group_id', groupId)
+    .eq('menu_item_id', menuItemId);
+  
+  if (updateItemsError) {
+    console.warn('Failed to update round items name:', updateItemsError);
+    // 不抛出错误，因为菜单项名称已更新成功
+    // RLS策略可能阻止更新，但菜单项本身已更新
+  }
+  
+  return {
+    id: updatedMenuItem.id,
+    groupId: updatedMenuItem.group_id,
+    nameDisplay: updatedMenuItem.name_display,
+    price: updatedMenuItem.price,
+    note: updatedMenuItem.note,
+    status: updatedMenuItem.status,
+    createdBy: updatedMenuItem.created_by,
+    createdAt: updatedMenuItem.created_at,
+    updatedAt: updatedMenuItem.updated_at,
+    updatedBy: updatedMenuItem.updated_by,
   } as GroupMenuItem;
 }
 
@@ -604,6 +806,9 @@ export async function getRoundItems(roundId: string): Promise<RoundItem[]> {
     updatedAt: item.updated_at,
     deleted: item.deleted,
     deletedBy: item.deleted_by,
+    menuItemId: item.menu_item_id,
+    userNameSnapshot: item.user_name_snapshot,
+    updatedBy: item.updated_by,
   })) as RoundItem[];
 }
 
@@ -966,9 +1171,10 @@ export async function confirmMemberOrder(groupId: string, userId: string): Promi
  * 最终确认结账（所有成员确认后，Owner调用）
  */
 export async function finalizeCheckout(groupId: string, userId: string): Promise<void> {
+  const client = ensureSupabase();
+  
   // 检查权限
-  const checkOwnerClient = ensureSupabase();
-  const { data: groupData } = await checkOwnerClient
+  const { data: groupData } = await client
     .from('groups')
     .select('owner_id, member_confirmations, checkout_confirming, members')
     .eq('id', groupId)
@@ -993,9 +1199,47 @@ export async function finalizeCheckout(groupId: string, userId: string): Promise
     throw new Error(`还有 ${unconfirmedMembers.length} 位成员未确认订单`);
   }
 
+  // 结账前：1. 昵称快照（从users表获取当前昵称）
+  const { data: membersData } = await client
+    .from('users')
+    .select('id, name')
+    .in('id', groupData.members);
+  
+  const memberNameMap = new Map<string, string>();
+  (membersData || []).forEach((user: any) => {
+    memberNameMap.set(user.id, user.name);
+  });
+  
+  // 更新所有订单项的昵称快照
+  for (const memberId of groupData.members) {
+    const userName = memberNameMap.get(memberId) || memberId;
+    await client
+      .from('round_items')
+      .update({ user_name_snapshot: userName })
+      .eq('group_id', groupId)
+      .eq('user_id', memberId)
+      .is('user_name_snapshot', null); // 只更新未设置快照的
+  }
+
+  // 结账前：2. 名称快照统一（确保此时订单名与最新菜单名一致）
+  // 获取所有菜单项
+  const { data: menuItems } = await client
+    .from('group_menu_items')
+    .select('id, name_display')
+    .eq('group_id', groupId)
+    .eq('status', 'active');
+  
+  // 更新所有关联订单项的名称快照
+  for (const menuItem of (menuItems || [])) {
+    await client
+      .from('round_items')
+      .update({ name_display: menuItem.name_display })
+      .eq('group_id', groupId)
+      .eq('menu_item_id', menuItem.id);
+  }
+
   // 关闭所有open的轮次（包括Extra round）
-  const closeRoundsClient = ensureSupabase();
-  await closeRoundsClient
+  await client
     .from('rounds')
     .update({
       status: 'closed',
@@ -1005,8 +1249,7 @@ export async function finalizeCheckout(groupId: string, userId: string): Promise
     .eq('status', 'open');
 
   // 标记组为已结账
-  const finalizeClient = ensureSupabase();
-  const { error } = await finalizeClient
+  const { error } = await client
     .from('groups')
     .update({ 
       settled: true,
@@ -1072,6 +1315,425 @@ export async function settleGroup(groupId: string, userId: string): Promise<void
     console.error('Failed to settle group:', settleError);
     throw new Error('结账失败');
   }
+}
+
+// ============ 店铺历史菜单相关 ============
+
+/**
+ * 在结账后，把本次 group 的所有去重过的菜品，保存为一个 restaurant_menu
+ */
+export async function saveGroupAsRestaurantMenu(
+  groupId: string,
+  userId: string,
+  displayName: string
+): Promise<void> {
+  const client = ensureSupabase();
+
+  // 1. 收集本次聚餐的所有点单条目
+  const { data: allGroupItems, error: itemsError } = await client
+    .from('round_items')
+    .select('*')
+    .eq('group_id', groupId)
+    .eq('deleted', false);
+
+  if (itemsError) {
+    console.error('Failed to fetch round items:', itemsError);
+    throw new Error('获取订单项失败');
+  }
+
+  if (!allGroupItems || allGroupItems.length === 0) {
+    // 极端情况：没有任何 item，直接返回
+    return;
+  }
+
+  // 2. 对 item 按 (nameDisplay, price, note) 去重
+  const uniqueItemsMap = new Map<string, typeof allGroupItems[0]>();
+  allGroupItems.forEach(item => {
+    const key = `${item.name_display.trim()}:${item.price}:${item.note || ''}`;
+    if (!uniqueItemsMap.has(key)) {
+      uniqueItemsMap.set(key, item);
+    }
+  });
+  const uniqueItems = Array.from(uniqueItemsMap.values());
+
+  // 3. 创建新的 RestaurantMenu
+  const now = new Date().toISOString();
+  const restaurantMenuId = 'rm_' + generateShortId();
+  
+  const { error: menuError } = await client
+    .from('restaurant_menus')
+    .insert([{
+      id: restaurantMenuId,
+      created_from_group_id: groupId,
+      created_at: now
+    }]);
+
+  if (menuError) {
+    console.error('Failed to create restaurant menu:', menuError);
+    throw new Error('创建店铺菜单失败: ' + menuError.message);
+  }
+
+  // 4. 保存对应的 RestaurantMenuItem[]
+  if (uniqueItems.length > 0) {
+    const menuItemsToInsert = uniqueItems.map(item => ({
+      id: generateUniqueId('RMI'),
+      restaurant_menu_id: restaurantMenuId,
+      name_display: item.name_display,
+      price: item.price,
+      note: item.note || null,
+      created_at: now
+    }));
+
+    const { error: itemsInsertError } = await client
+      .from('restaurant_menu_items')
+      .insert(menuItemsToInsert);
+
+    if (itemsInsertError) {
+      console.error('Failed to insert menu items:', itemsInsertError);
+      // 回滚：删除已创建的菜单
+      await client.from('restaurant_menus').delete().eq('id', restaurantMenuId);
+      throw new Error('保存菜单项失败');
+    }
+  }
+
+  // 5. 建立 UserRestaurantMenuLink，带上"最多 2 个 + LRU"逻辑
+  const { data: userLinks, error: linksError } = await client
+    .from('user_restaurant_menu_links')
+    .select('*')
+    .eq('user_id', userId);
+
+  if (linksError) {
+    console.error('Failed to fetch user links:', linksError);
+    throw new Error('获取用户关联失败');
+  }
+
+  if (!userLinks || userLinks.length < 2) {
+    // 直接插入新 link
+    const { error: linkInsertError } = await client
+      .from('user_restaurant_menu_links')
+      .insert([{
+        user_id: userId,
+        restaurant_menu_id: restaurantMenuId,
+        display_name: displayName,
+        created_at: now,
+        last_used_at: now
+      }]);
+
+    if (linkInsertError) {
+      console.error('Failed to create user link:', linkInsertError);
+      throw new Error('创建用户关联失败: ' + linkInsertError.message);
+    }
+  } else {
+    // 找出 lastUsedAt 最早的那一条 link
+    const sortedLinks = [...userLinks].sort((a, b) => {
+      const aTime = a.last_used_at || a.created_at;
+      const bTime = b.last_used_at || b.created_at;
+      return aTime.localeCompare(bTime);
+    });
+    const oldestLink = sortedLinks[0];
+
+    // 检查这个 restaurantMenuId 是否还被其他用户使用
+    const { data: otherUserLinks, error: otherLinksError } = await client
+      .from('user_restaurant_menu_links')
+      .select('*')
+      .eq('restaurant_menu_id', oldestLink.restaurant_menu_id)
+      .neq('user_id', userId);
+
+    if (otherLinksError) {
+      console.error('Failed to check other user links:', otherLinksError);
+      throw new Error('检查其他用户关联失败');
+    }
+
+    // 删除旧的 link
+    const { error: deleteLinkError } = await client
+      .from('user_restaurant_menu_links')
+      .delete()
+      .eq('user_id', oldestLink.user_id)
+      .eq('restaurant_menu_id', oldestLink.restaurant_menu_id);
+
+    if (deleteLinkError) {
+      console.error('Failed to delete old link:', deleteLinkError);
+      throw new Error('删除旧关联失败');
+    }
+
+    // 如果没有其他用户使用，删除这个 RestaurantMenu 及其 RestaurantMenuItem[]
+    if (!otherUserLinks || otherUserLinks.length === 0) {
+      await client
+        .from('restaurant_menu_items')
+        .delete()
+        .eq('restaurant_menu_id', oldestLink.restaurant_menu_id);
+      
+      await client
+        .from('restaurant_menus')
+        .delete()
+        .eq('id', oldestLink.restaurant_menu_id);
+    }
+
+    // 插入当前用户指向新 RestaurantMenu 的 link
+    const { error: linkInsertError } = await client
+      .from('user_restaurant_menu_links')
+      .insert([{
+        user_id: userId,
+        restaurant_menu_id: restaurantMenuId,
+        display_name: displayName,
+        created_at: now,
+        last_used_at: now
+      }]);
+
+    if (linkInsertError) {
+      console.error('Failed to create user link:', linkInsertError);
+      throw new Error('创建用户关联失败');
+    }
+  }
+
+  // 6. 清理孤儿菜单（确保没有 link 的菜单被删除）
+  // 使用 SQL 查询找出没有关联的菜单并删除
+  const { data: allMenus, error: allMenusError } = await client
+    .from('restaurant_menus')
+    .select('id');
+
+  if (!allMenusError && allMenus) {
+    const { data: allLinks, error: allLinksError } = await client
+      .from('user_restaurant_menu_links')
+      .select('restaurant_menu_id');
+
+    if (!allLinksError && allLinks) {
+      const menuIdsWithLinks = new Set(allLinks.map(l => l.restaurant_menu_id));
+      const orphanMenuIds = allMenus
+        .map(m => m.id)
+        .filter(id => !menuIdsWithLinks.has(id));
+
+      if (orphanMenuIds.length > 0) {
+        // 删除孤儿菜单的 items
+        await client
+          .from('restaurant_menu_items')
+          .delete()
+          .in('restaurant_menu_id', orphanMenuIds);
+
+        // 删除孤儿菜单
+        await client
+          .from('restaurant_menus')
+          .delete()
+          .in('id', orphanMenuIds);
+      }
+    }
+  }
+}
+
+/**
+ * 获取当前用户收藏过的所有店铺菜单
+ */
+export async function getUserRestaurantMenus(
+  userId: string
+): Promise<Array<{
+  link: import('@/types').UserRestaurantMenuLink;
+  menu: import('@/types').RestaurantMenu;
+  items: import('@/types').RestaurantMenuItem[];
+}>> {
+  const client = ensureSupabase();
+
+  // 找到该用户的所有 link
+  const { data: userLinks, error: linksError } = await client
+    .from('user_restaurant_menu_links')
+    .select('*')
+    .eq('user_id', userId);
+
+  if (linksError) {
+    console.error('Failed to fetch user links:', linksError);
+    throw new Error('获取用户关联失败: ' + linksError.message);
+  }
+
+  if (!userLinks || userLinks.length === 0) {
+    return [];
+  }
+
+  // 为每个 link 找到对应的 menu 和 items
+  const result = await Promise.all(
+    userLinks.map(async (link) => {
+      const { data: menu, error: menuError } = await client
+        .from('restaurant_menus')
+        .select('*')
+        .eq('id', link.restaurant_menu_id)
+        .single();
+
+      if (menuError || !menu) {
+        // 数据不一致，跳过
+        return null;
+      }
+
+      const { data: items, error: itemsError } = await client
+        .from('restaurant_menu_items')
+        .select('*')
+        .eq('restaurant_menu_id', link.restaurant_menu_id);
+
+      if (itemsError) {
+        console.error('Failed to fetch menu items:', itemsError);
+        return null;
+      }
+
+      return {
+        link: {
+          userId: link.user_id,
+          restaurantMenuId: link.restaurant_menu_id,
+          displayName: link.display_name,
+          createdAt: link.created_at,
+          lastUsedAt: link.last_used_at
+        },
+        menu: {
+          id: menu.id,
+          createdFromGroupId: menu.created_from_group_id,
+          createdAt: menu.created_at
+        },
+        items: (items || []).map(item => ({
+          id: item.id,
+          restaurantMenuId: item.restaurant_menu_id,
+          nameDisplay: item.name_display,
+          price: item.price,
+          note: item.note || undefined
+        }))
+      };
+    })
+  );
+
+  return result.filter((item): item is NonNullable<typeof item> => item !== null);
+}
+
+/**
+ * 导入历史菜单到当前组
+ */
+export async function importRestaurantMenuToGroup(
+  groupId: string,
+  restaurantMenuId: string,
+  userId: string
+): Promise<{
+  imported: number;
+  conflicts: Array<{ nameDisplay: string; price: number; note?: string }>;
+}> {
+  const client = ensureSupabase();
+
+  // 验证组是否存在
+  const { data: group, error: groupError } = await client
+    .from('groups')
+    .select('id')
+    .eq('id', groupId)
+    .single();
+
+  if (groupError || !group) {
+    throw new Error('组不存在');
+  }
+
+  // 获取要导入的菜单项
+  const { data: menuItemsToImport, error: itemsError } = await client
+    .from('restaurant_menu_items')
+    .select('*')
+    .eq('restaurant_menu_id', restaurantMenuId);
+
+  if (itemsError) {
+    console.error('Failed to fetch menu items:', itemsError);
+    throw new Error('获取菜单项失败');
+  }
+
+  if (!menuItemsToImport || menuItemsToImport.length === 0) {
+    throw new Error('菜单为空');
+  }
+
+  // 获取当前组的菜单
+  const { data: currentMenu, error: menuError } = await client
+    .from('group_menu_items')
+    .select('*')
+    .eq('group_id', groupId)
+    .eq('status', 'active');
+
+  if (menuError) {
+    console.error('Failed to fetch current menu:', menuError);
+    throw new Error('获取当前菜单失败');
+  }
+
+  // 使用现有的菜单去重逻辑导入
+  let importedCount = 0;
+  const conflicts: Array<{ nameDisplay: string; price: number; note?: string }> = [];
+  const itemsToInsert: Array<{
+    id: string;
+    group_id: string;
+    name_display: string;
+    price: number;
+    note: string | null;
+    status: string;
+    created_by: string;
+    created_at: string;
+  }> = [];
+
+  for (const menuItem of menuItemsToImport) {
+    // 检查是否冲突（同名不同价）
+    const conflict = currentMenu?.find(
+      item => 
+        item.name_display.trim() === menuItem.name_display.trim() &&
+        item.price !== menuItem.price &&
+        item.status === 'active'
+    );
+
+    if (conflict) {
+      // 跳过冲突项
+      conflicts.push({
+        nameDisplay: menuItem.name_display,
+        price: menuItem.price,
+        note: menuItem.note || undefined
+      });
+      continue;
+    }
+
+    // 检查是否已存在同名同价
+    const exists = currentMenu?.find(
+      item =>
+        item.name_display.trim() === menuItem.name_display.trim() &&
+        item.price === menuItem.price &&
+        item.status === 'active'
+    );
+
+    if (!exists) {
+      // 准备插入新菜单项
+      itemsToInsert.push({
+        id: generateUniqueId('MI'),
+        group_id: groupId,
+        name_display: menuItem.name_display,
+        price: menuItem.price,
+        note: menuItem.note || null,
+        status: 'active',
+        created_by: userId,
+        created_at: new Date().toISOString()
+      });
+      importedCount++;
+    }
+  }
+
+  // 批量插入新菜单项
+  if (itemsToInsert.length > 0) {
+    const { error: insertError } = await client
+      .from('group_menu_items')
+      .insert(itemsToInsert);
+
+    if (insertError) {
+      console.error('Failed to insert menu items:', insertError);
+      throw new Error('导入菜单项失败');
+    }
+  }
+
+  // 更新当前用户的 UserRestaurantMenuLink.lastUsedAt
+  const { error: updateError } = await client
+    .from('user_restaurant_menu_links')
+    .update({ last_used_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .eq('restaurant_menu_id', restaurantMenuId);
+
+  if (updateError) {
+    console.error('Failed to update last_used_at:', updateError);
+    // 不抛出错误，因为导入已经成功
+  }
+
+  return {
+    imported: importedCount,
+    conflicts
+  };
 }
 
 /**

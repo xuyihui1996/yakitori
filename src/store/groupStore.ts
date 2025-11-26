@@ -49,6 +49,7 @@ interface GroupState {
   // 菜单操作
   addMenuItem: (item: Omit<GroupMenuItem, 'id' | 'createdAt' | 'createdBy' | 'groupId'>) => Promise<{ success: boolean; conflict?: MenuConflict }>;
   updateMenuItemPrice: (nameDisplay: string, newPrice: number) => Promise<void>;
+  updateMenuItemName: (menuItemId: string, newName: string) => Promise<void>;
   disableMenuItem: (itemId: string) => Promise<void>;
 
   // 轮次操作
@@ -68,6 +69,18 @@ interface GroupState {
 
   // 成员管理
   removeMember: (memberId: string) => Promise<void>;
+
+  // 店铺历史菜单
+  saveGroupAsRestaurantMenu: (displayName: string) => Promise<void>;
+  getUserRestaurantMenus: () => Promise<Array<{
+    link: import('@/types').UserRestaurantMenuLink;
+    menu: import('@/types').RestaurantMenu;
+    items: import('@/types').RestaurantMenuItem[];
+  }>>;
+  importRestaurantMenuToGroup: (restaurantMenuId: string) => Promise<{
+    imported: number;
+    conflicts: Array<{ nameDisplay: string; price: number; note?: string }>;
+  }>;
 
   // 清空状态
   reset: () => void;
@@ -468,6 +481,58 @@ export const useGroupStore = create<GroupState>((set, get) => ({
         get().loadGroup(currentGroup.id),
         get().loadAllRoundItems()
       ]);
+    } catch (error) {
+      set({ error: (error as Error).message });
+      throw error;
+    }
+  },
+
+  // 店铺历史菜单相关
+  saveGroupAsRestaurantMenu: async (displayName: string) => {
+    const { currentGroup, currentUser } = get();
+    if (!currentGroup || !currentUser) {
+      throw new Error('未登录或未加入组');
+    }
+
+    try {
+      await api.saveGroupAsRestaurantMenu(currentGroup.id, currentUser.id, displayName);
+    } catch (error) {
+      set({ error: (error as Error).message });
+      throw error;
+    }
+  },
+
+  getUserRestaurantMenus: async () => {
+    const { currentUser } = get();
+    if (!currentUser) {
+      throw new Error('未登录');
+    }
+
+    try {
+      return await api.getUserRestaurantMenus(currentUser.id);
+    } catch (error) {
+      set({ error: (error as Error).message });
+      throw error;
+    }
+  },
+
+  importRestaurantMenuToGroup: async (restaurantMenuId: string) => {
+    const { currentGroup, currentUser } = get();
+    if (!currentGroup || !currentUser) {
+      throw new Error('未登录或未加入组');
+    }
+
+    try {
+      const result = await api.importRestaurantMenuToGroup(
+        currentGroup.id,
+        restaurantMenuId,
+        currentUser.id
+      );
+      
+      // 重新加载菜单
+      await get().loadMenu();
+      
+      return result;
     } catch (error) {
       set({ error: (error as Error).message });
       throw error;

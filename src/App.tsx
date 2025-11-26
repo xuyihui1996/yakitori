@@ -24,7 +24,6 @@ function App() {
       if (currentPath === '/') {
         // 如果有查询参数（如 ?groupId=xxx），说明是通过链接打开的，不应该自动跳转
         if (currentSearch && currentSearch.includes('groupId=')) {
-          console.log('检测到groupId参数，不自动跳转，等待用户加入');
           return;
         }
         
@@ -32,7 +31,6 @@ function App() {
         const showingQR = sessionStorage.getItem('showing_qr_code');
         if (showingQR === 'true') {
           // 正在显示二维码，不自动跳转
-          console.log('正在显示二维码，不自动跳转');
           return;
         }
       }

@@ -60,6 +60,9 @@ export interface RoundItem {
   updatedAt?: string;
   deleted?: boolean;
   deletedBy?: string;
+  menuItemId?: string;        // 关联的菜单项ID（用于统一改名）
+  userNameSnapshot?: string;  // 结账时的用户昵称快照
+  updatedBy?: string;         // 最后更新人
 }
 
 // 菜单项冲突信息
@@ -124,5 +127,32 @@ export interface ExtraRoundItem {
   qty: number; // 正数表示"多吃"，负数表示"未上"
   note?: string;
   createdAt: string;
+}
+
+// ============ 店铺历史菜单相关 ============
+
+// 店铺菜单模板（本次聚餐生成的一份"全桌菜品列表"）
+export interface RestaurantMenu {
+  id: string;                 // 比如 "rm_xxx"
+  createdFromGroupId: string; // 来源 group，方便溯源
+  createdAt: string;
+}
+
+// 店铺菜单里的具体条目
+export interface RestaurantMenuItem {
+  id: string;
+  restaurantMenuId: string;
+  nameDisplay: string;        // 菜名（日文）
+  price: number;              // 单价（整数，单位日元）
+  note?: string;              // 备注（中文/说明）
+}
+
+// 用户与店铺菜单的关联
+export interface UserRestaurantMenuLink {
+  userId: string;
+  restaurantMenuId: string;
+  displayName: string;        // 用户起的"店名"（restaurant_mume）
+  createdAt: string;
+  lastUsedAt: string;         // 最近一次导入时间（LRU 用）
 }
 
