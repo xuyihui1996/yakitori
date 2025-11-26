@@ -319,6 +319,29 @@ export const useGroupStore = create<GroupState>((set, get) => ({
     }
   },
 
+  updateMenuItemName: async (menuItemId: string, newName: string) => {
+    const { currentGroup, currentUser } = get();
+    if (!currentGroup || !currentUser) {
+      throw new Error('未登录或未加入组');
+    }
+
+    try {
+      await api.updateMenuItemName(currentGroup.id, menuItemId, newName, currentUser.id);
+      // 重新加载菜单和所有订单项
+      await Promise.all([
+        get().loadMenu(),
+        get().loadAllRoundItems(),
+        get().loadRounds()
+      ]);
+    } catch (error: any) {
+      // 409冲突错误直接抛出，让前端处理
+      if (error.status === 409 || error.status === 403) {
+        throw error;
+      }
+      throw new Error('修改菜名失败: ' + (error.message || '未知错误'));
+    }
+  },
+
   disableMenuItem: async (itemId: string) => {
     try {
       await api.updateMenuItem(itemId, { status: 'disabled' });
