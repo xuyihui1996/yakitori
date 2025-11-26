@@ -3,7 +3,7 @@
  * 使用 Word 级别的解析，更适合竖排日文菜单
  */
 
-import type { OcrBlock, OcrPage, BoundingBox, OcrWord } from '../types/ocr';
+import type { OcrBlock, OcrPage, BoundingBox } from '../types/ocr';
 import type { GoogleVisionResponse } from '../ocr/googleVision';
 
 /**

@@ -5,7 +5,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Users, Receipt, Settings, PlayCircle, StopCircle, CheckCircle, Scan } from 'lucide-react';
+import { Plus, Users, Receipt, Settings, PlayCircle, CheckCircle, Scan } from 'lucide-react';
 import { useGroupStore } from '@/store/groupStore';
 import { ItemInput } from '@/components/ItemInput';
 import { MenuPicker } from '@/components/MenuPicker';

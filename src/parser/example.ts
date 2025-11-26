@@ -34,9 +34,10 @@ try {
 }
 
 /**
+ * 示例
  * 示例1：从本地文件读取（仅在 Node.js 环境可用）
  */
-async function example1_LocalFile() {
+async function _example1_LocalFile() {
   console.log('=== 示例1：从本地文件读取 ===\n');
 
   if (!fs || !path) {
@@ -92,7 +93,7 @@ async function example1_LocalFile() {
 /**
  * 示例2：从 URL 读取
  */
-async function example2_Url() {
+async function _example2_Url() {
   console.log('=== 示例2：从 URL 读取 ===\n');
 
   try {
