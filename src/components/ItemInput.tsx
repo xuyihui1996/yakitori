@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { Plus, X } from 'lucide-react';
+import { useI18n } from '@/i18n';
 
 interface ItemInputProps {
   onSubmit: (item: {
@@ -22,6 +23,7 @@ export const ItemInput: React.FC<ItemInputProps> = ({
   onCancel,
   defaultQty = 1
 }) => {
+  const { t } = useI18n();
   const [nameDisplay, setNameDisplay] = useState('');
   const [price, setPrice] = useState('');
   const [qty, setQty] = useState(defaultQty);
@@ -32,18 +34,18 @@ export const ItemInput: React.FC<ItemInputProps> = ({
     e.preventDefault();
     
     if (!nameDisplay.trim() || !price) {
-      alert('请填写菜名和价格');
+      alert(t('itemInput.needNamePrice'));
       return;
     }
 
     const priceNum = parseFloat(price);
     if (isNaN(priceNum) || priceNum <= 0) {
-      alert('请输入有效的价格');
+      alert(t('itemInput.invalidPrice'));
       return;
     }
 
     if (qty <= 0) {
-      alert('数量必须大于0');
+      alert(t('itemInput.invalidQty'));
       return;
     }
 
@@ -71,7 +73,7 @@ export const ItemInput: React.FC<ItemInputProps> = ({
   return (
     <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-sm border p-4">
       <div className="flex justify-between items-center mb-3">
-        <h3 className="text-lg font-semibold text-gray-800">新增菜品</h3>
+        <h3 className="text-lg font-semibold text-gray-800">{t('itemInput.title')}</h3>
         {onCancel && (
           <button
             type="button"
@@ -87,7 +89,7 @@ export const ItemInput: React.FC<ItemInputProps> = ({
         {/* 菜名 */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            菜名 *
+            {t('itemInput.name')}
           </label>
           <input
             type="text"
@@ -103,7 +105,7 @@ export const ItemInput: React.FC<ItemInputProps> = ({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              价格 (¥) * <span className="text-xs text-gray-500 font-normal">（含税价格）</span>
+              {t('itemInput.price')}
             </label>
             <input
               type="number"
@@ -119,7 +121,7 @@ export const ItemInput: React.FC<ItemInputProps> = ({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              数量 *
+              {t('itemInput.qty')}
             </label>
             <div className="flex items-center space-x-2">
               <button
@@ -150,7 +152,7 @@ export const ItemInput: React.FC<ItemInputProps> = ({
         {/* 备注 */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            备注（中文名/说明）
+            {t('itemInput.note')}
           </label>
           <input
             type="text"
@@ -168,10 +170,9 @@ export const ItemInput: React.FC<ItemInputProps> = ({
           className="w-full py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 font-medium"
         >
           <Plus size={20} />
-          <span>{submitting ? '添加中...' : '添加菜品'}</span>
+          <span>{submitting ? t('itemInput.adding') : t('itemInput.add')}</span>
         </button>
       </div>
     </form>
   );
 };
-

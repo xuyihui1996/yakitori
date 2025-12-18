@@ -47,6 +47,19 @@ export interface Round {
 }
 
 // 某一轮里的具体点单记录
+export type SharedStatus = 'pending' | 'active' | 'locked';
+export type ShareMode = 'equal' | 'ratio' | 'units';
+
+export interface RoundItemShare {
+  userId: string;
+  // ratio 模式：权重（整数）
+  weight?: number;
+  // units 模式：认领份数（整数）
+  units?: number;
+  // locked 后：该成员应付金额（日元，整数）
+  amountYen?: number;
+}
+
 export interface RoundItem {
   id: string;
   groupId: string;
@@ -63,6 +76,15 @@ export interface RoundItem {
   menuItemId?: string;        // 关联的菜单项ID（用于统一改名）
   userNameSnapshot?: string;  // 结账时的用户昵称快照
   updatedBy?: string;         // 最后更新人
+
+  // ============ 共享条目（混合式共享） ============
+  // 说明：共享条目以“单条 RoundItem + shares 列表”表达，不为每个成员生成独立订单行
+  isShared?: boolean;
+  shareMode?: ShareMode;
+  shares?: RoundItemShare[];
+  status?: SharedStatus;
+  allowSelfJoin?: boolean; // equal/ratio：允许成员自助加入
+  allowClaimUnits?: boolean; // units：允许成员自助认领份数
 }
 
 // 菜单项冲突信息
@@ -155,4 +177,3 @@ export interface UserRestaurantMenuLink {
   createdAt: string;
   lastUsedAt: string;         // 最近一次导入时间（LRU 用）
 }
-

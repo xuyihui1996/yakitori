@@ -4,6 +4,7 @@
 
 import React, { useState } from 'react';
 import { X, Save } from 'lucide-react';
+import { useI18n } from '@/i18n';
 
 interface SaveRestaurantMenuModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ export const SaveRestaurantMenuModal: React.FC<SaveRestaurantMenuModalProps> = (
   onSave,
   onSkip
 }) => {
+  const { t } = useI18n();
   const [displayName, setDisplayName] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -23,7 +25,7 @@ export const SaveRestaurantMenuModal: React.FC<SaveRestaurantMenuModalProps> = (
 
   const handleSave = async () => {
     if (!displayName.trim()) {
-      alert('请输入店铺菜单名称');
+      alert(t('saveMenu.needName'));
       return;
     }
 
@@ -32,7 +34,7 @@ export const SaveRestaurantMenuModal: React.FC<SaveRestaurantMenuModalProps> = (
       await onSave(displayName.trim());
       setDisplayName('');
     } catch (error) {
-      alert('保存失败：' + (error as Error).message);
+      alert(t('saveMenu.failed', { message: (error as Error).message }));
     } finally {
       setSaving(false);
     }
@@ -48,7 +50,7 @@ export const SaveRestaurantMenuModal: React.FC<SaveRestaurantMenuModalProps> = (
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-gray-800">
-            保存为店铺菜单
+            {t('saveMenu.title')}
           </h3>
           <button
             onClick={handleSkip}
@@ -59,20 +61,18 @@ export const SaveRestaurantMenuModal: React.FC<SaveRestaurantMenuModalProps> = (
         </div>
 
         <p className="text-sm text-gray-600 mb-4">
-          是否将本次所有人点过的菜保存为一个店铺菜单？
-          <br />
-          你可以为这份菜单起一个名字（例如：川崎-鸟贵族、西口串烧）。
+          {t('saveMenu.desc')}
         </p>
 
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            店铺菜单名称 *
+            {t('saveMenu.nameLabel')}
           </label>
           <input
             type="text"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="例：川崎-鸟贵族"
+            placeholder={t('saveMenu.namePlaceholder')}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             disabled={saving}
             onKeyDown={(e) => {
@@ -89,7 +89,7 @@ export const SaveRestaurantMenuModal: React.FC<SaveRestaurantMenuModalProps> = (
             disabled={saving}
             className="flex-1 py-2.5 px-4 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 font-medium"
           >
-            <span>跳过</span>
+            <span>{t('common.skip')}</span>
           </button>
           <button
             onClick={handleSave}
@@ -97,11 +97,10 @@ export const SaveRestaurantMenuModal: React.FC<SaveRestaurantMenuModalProps> = (
             className="flex-1 py-2.5 px-4 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 font-medium"
           >
             <Save size={18} />
-            <span>{saving ? '保存中...' : '保存'}</span>
+            <span>{saving ? t('saveMenu.saving') : t('common.save')}</span>
           </button>
         </div>
       </div>
     </div>
   );
 };
-

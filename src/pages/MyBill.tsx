@@ -12,9 +12,12 @@ import { UserBill } from '@/types';
 import { formatMoney } from '@/utils/money';
 import { generateUserBillText, copyToClipboard } from '@/utils/export';
 import { getRoundDisplayId } from '@/utils/format';
+import { useI18n } from '@/i18n';
+import { LanguageToggle } from '@/components/LanguageToggle';
 
 export const MyBill: React.FC = () => {
   const navigate = useNavigate();
+  const { t, locale } = useI18n();
   const { currentGroup, currentUser, rounds } = useGroupStore();
   const [bill, setBill] = useState<UserBill | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,7 +51,8 @@ export const MyBill: React.FC = () => {
     const text = generateUserBillText(
       bill.userName,
       rounds,
-      bill.rounds.flatMap(r => r.items)
+      bill.rounds.flatMap(r => r.items),
+      locale
     );
 
     const success = await copyToClipboard(text);
@@ -61,7 +65,7 @@ export const MyBill: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500">加载中...</div>
+        <div className="text-gray-500">{t('bill.loading')}</div>
       </div>
     );
   }
@@ -69,7 +73,7 @@ export const MyBill: React.FC = () => {
   if (!bill) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500">暂无账单数据</div>
+        <div className="text-gray-500">{t('bill.empty')}</div>
       </div>
     );
   }
@@ -86,15 +90,16 @@ export const MyBill: React.FC = () => {
             <ArrowLeft size={24} />
           </button>
           <div className="flex-1">
-            <h1 className="text-xl font-bold text-gray-900">我的账单</h1>
+            <h1 className="text-xl font-bold text-gray-900">{t('bill.title')}</h1>
             <p className="text-sm text-gray-500">
               {currentGroup?.id} · {bill.userName}
             </p>
           </div>
+          <LanguageToggle className="p-2 hover:bg-gray-100 rounded-lg text-gray-700 flex items-center gap-2" />
           <button
             onClick={handleExport}
             className="p-2 hover:bg-gray-100 rounded-lg"
-            title="导出"
+            title={t('bill.export')}
           >
             {copied ? (
               <Check size={24} className="text-green-600" />
@@ -108,13 +113,13 @@ export const MyBill: React.FC = () => {
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
         {/* 总金额卡片 */}
         <div className="bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl p-6 text-white shadow-lg">
-          <p className="text-sm opacity-90 mb-2">总消费</p>
+          <p className="text-sm opacity-90 mb-2">{t('bill.total')}</p>
           <p className="text-4xl font-bold">{formatMoney(bill.grandTotal)}</p>
           <div className="mt-4 flex items-center space-x-4 text-sm opacity-90">
-            <span>{bill.rounds.length} 轮</span>
+            <span>{t('bill.rounds', { n: bill.rounds.length })}</span>
             <span>·</span>
             <span>
-              {bill.rounds.reduce((sum, r) => sum + r.items.length, 0)} 项
+              {t('bill.items', { n: bill.rounds.reduce((sum, r) => sum + r.items.length, 0) })}
             </span>
           </div>
         </div>
@@ -146,7 +151,7 @@ export const MyBill: React.FC = () => {
                             ? 'bg-green-100 text-green-700'
                             : 'bg-gray-200 text-gray-600'
                         }`}>
-                          {round.status === 'open' ? '进行中' : '已关闭'}
+                          {round.status === 'open' ? t('owner.roundOpen') : t('owner.roundClosed')}
                         </span>
                       )}
                     </div>
@@ -225,12 +230,12 @@ export const MyBill: React.FC = () => {
         {/* 空状态 */}
         {bill.rounds.every(r => r.items.length === 0) && (
           <div className="bg-white rounded-lg shadow-sm border p-12 text-center">
-            <p className="text-gray-500">您还没有点过菜</p>
+            <p className="text-gray-500">{t('bill.emptyOrder')}</p>
             <button
               onClick={() => navigate('/group')}
               className="mt-4 px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
             >
-              去点单
+              {t('bill.gotoOrder')}
             </button>
           </div>
         )}
@@ -238,4 +243,3 @@ export const MyBill: React.FC = () => {
     </div>
   );
 };
-

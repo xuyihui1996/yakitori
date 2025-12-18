@@ -55,6 +55,13 @@ CREATE TABLE IF NOT EXISTS round_items (
   price NUMERIC NOT NULL,
   qty INTEGER NOT NULL,
   note TEXT,
+  -- 共享条目（可选）
+  is_shared BOOLEAN DEFAULT FALSE,
+  share_mode TEXT,
+  share_status TEXT,
+  shares JSONB,
+  allow_self_join BOOLEAN DEFAULT TRUE,
+  allow_claim_units BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ,
   deleted BOOLEAN DEFAULT FALSE,
@@ -71,4 +78,3 @@ CREATE INDEX IF NOT EXISTS idx_round_items_user ON round_items(user_id);
 
 -- 显示成功消息
 SELECT '✅ 所有表创建成功！' as message;
-

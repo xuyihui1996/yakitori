@@ -7,6 +7,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Info, Power, PowerOff, Plus, Minus, StopCircle, Edit2, X, Check } from 'lucide-react';
 import { GroupMenuItem, User, RoundItem } from '@/types';
 import { formatMoney } from '@/utils/money';
+import { useI18n } from '@/i18n';
 
 interface MenuPickerProps {
   menu: GroupMenuItem[];
@@ -41,6 +42,7 @@ export const MenuPicker: React.FC<MenuPickerProps> = ({
   hasCurrentRound = false,
   isSettled = false
 }) => {
+  const { t } = useI18n();
   const [searchText, setSearchText] = useState('');
   // 本地管理的数量状态（菜单项ID -> 数量）
   const [localQuantities, setLocalQuantities] = useState<Record<string, number>>({});
@@ -74,11 +76,11 @@ export const MenuPicker: React.FC<MenuPickerProps> = ({
       if (error.status === 409) {
         // 菜名冲突
         const existingItem = error.existingItem;
-        alert(`菜名已存在，请重新命名\n\n已存在的菜品：${existingItem?.nameDisplay} (¥${existingItem?.price})`);
+        alert(t('menu.renameConflict', { name: existingItem?.nameDisplay || '', price: existingItem?.price || '' }));
       } else if (error.status === 403) {
-        alert(error.message || '该桌已结账，无法修改菜名');
+        alert(error.message || t('menu.renameSettled'));
       } else {
-        alert(error.message || '修改菜名失败');
+        alert(error.message || t('menu.renameFailed'));
       }
     } finally {
       setRenaming(false);
@@ -236,7 +238,7 @@ export const MenuPicker: React.FC<MenuPickerProps> = ({
       const errorMessage = (error as Error).message;
       // 如果错误信息中不包含轮次关闭的提示，才显示通用错误
       if (!errorMessage.includes('轮次已关闭') && !errorMessage.includes('无法添加订单')) {
-        alert('应用改动失败：' + errorMessage);
+        alert(t('menu.applyFailed', { message: errorMessage }));
       }
     }
   };
@@ -267,7 +269,7 @@ export const MenuPicker: React.FC<MenuPickerProps> = ({
             type="text"
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
-            placeholder="搜索菜品..."
+            placeholder={t('menu.searchPlaceholder')}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
         </div>
@@ -277,7 +279,7 @@ export const MenuPicker: React.FC<MenuPickerProps> = ({
       <div className="max-h-96 overflow-y-auto">
         {filteredMenu.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
-            {searchText ? '未找到匹配的菜品' : '暂无菜品，请先添加'}
+            {searchText ? t('menu.noMatch') : t('menu.empty')}
           </div>
         ) : (
           <div className="divide-y">
@@ -318,7 +320,7 @@ export const MenuPicker: React.FC<MenuPickerProps> = ({
                               onClick={() => handleSaveName(item.id)}
                               disabled={renaming}
                               className="p-1 text-green-600 hover:bg-green-50 rounded disabled:opacity-50"
-                              title="保存"
+                              title={t('common.save')}
                             >
                               <Check size={16} />
                             </button>
@@ -329,7 +331,7 @@ export const MenuPicker: React.FC<MenuPickerProps> = ({
                               }}
                               disabled={renaming}
                               className="p-1 text-gray-600 hover:bg-gray-50 rounded disabled:opacity-50"
-                              title="取消"
+                              title={t('common.cancel')}
                             >
                               <X size={16} />
                             </button>
@@ -346,14 +348,14 @@ export const MenuPicker: React.FC<MenuPickerProps> = ({
                                   setEditingName(item.nameDisplay);
                                 }}
                                 className="p-1 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors"
-                                title="改名"
+                                title={t('menu.rename')}
                               >
                                 <Edit2 size={14} />
                               </button>
                             )}
                             {item.status === 'disabled' && (
                               <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded">
-                                已停售
+                                {t('menu.disabled')}
                               </span>
                             )}
                           </>
@@ -363,7 +365,7 @@ export const MenuPicker: React.FC<MenuPickerProps> = ({
                         <p className="text-sm text-gray-500 mt-0.5">{item.note}</p>
                       )}
                       <p className="text-xs text-gray-400 mt-1">
-                        由 {members.find(m => m.id === item.createdBy)?.name || item.createdBy} 添加
+                        {t('menu.addedBy', { name: members.find(m => m.id === item.createdBy)?.name || item.createdBy })}
                       </p>
                       
                       {/* 数量加减按钮：放在每条item下方 */}
@@ -373,7 +375,7 @@ export const MenuPicker: React.FC<MenuPickerProps> = ({
                             onClick={(e) => handleDecrease(item, e)}
                             disabled={itemQty <= 0}
                             className="flex items-center justify-center w-8 h-8 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            title="减少"
+                            title={t('menu.decrease')}
                           >
                             <Minus size={16} className="text-gray-600" />
                           </button>
@@ -383,7 +385,7 @@ export const MenuPicker: React.FC<MenuPickerProps> = ({
                           <button
                             onClick={(e) => handleIncrease(item, e)}
                             className="flex items-center justify-center w-8 h-8 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
-                            title="增加"
+                            title={t('menu.increase')}
                           >
                             <Plus size={16} className="text-gray-600" />
                           </button>
@@ -408,7 +410,7 @@ export const MenuPicker: React.FC<MenuPickerProps> = ({
                               ? 'text-green-600 hover:bg-green-50'
                               : 'text-red-600 hover:bg-red-50'
                           }`}
-                          title={item.status === 'disabled' ? '启用' : '停售'}
+                          title={item.status === 'disabled' ? t('menu.enable') : t('menu.disable')}
                         >
                           {item.status === 'disabled' ? (
                             <Power size={18} />
@@ -433,7 +435,7 @@ export const MenuPicker: React.FC<MenuPickerProps> = ({
             onClick={handleConfirmChanges}
             className="w-full py-3 px-4 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium transition-colors"
           >
-            确认改动
+            {t('menu.confirmChanges')}
           </button>
         </div>
       )}
@@ -446,7 +448,7 @@ export const MenuPicker: React.FC<MenuPickerProps> = ({
             className="w-full py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium flex items-center justify-center space-x-2"
           >
             <StopCircle size={20} />
-            <span>结束当前轮次</span>
+            <span>{t('menu.endRound')}</span>
           </button>
         </div>
       )}
@@ -456,11 +458,10 @@ export const MenuPicker: React.FC<MenuPickerProps> = ({
         <div className="p-3 border-t bg-yellow-50 flex items-start space-x-2">
           <Info size={16} className="text-yellow-600 mt-0.5 flex-shrink-0" />
           <p className="text-xs text-yellow-700">
-            当前轮次已关闭或您没有权限操作
+            {t('menu.roundClosedOrNoPermission')}
           </p>
         </div>
       )}
     </div>
   );
 };
-

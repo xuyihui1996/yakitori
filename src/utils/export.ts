@@ -6,6 +6,9 @@
 import { Round, RoundItem } from '@/types';
 import { formatMoney, calculateTotal } from './money';
 import { getRoundDisplayId } from './format';
+import type { Locale } from '@/i18n/messages';
+import { translate } from '@/i18n/global';
+import { getDefaultLocale } from '@/i18n';
 
 /**
  * 按菜名聚合订单项
@@ -56,22 +59,24 @@ export function aggregateItemsByName(items: RoundItem[]): Array<{
  */
 export function generateRoundExportText(
   round: Round,
-  items: RoundItem[]
+  items: RoundItem[],
+  locale: Locale = getDefaultLocale()
 ): string {
+  const t = (key: any, params?: any) => translate(locale, key, params);
   const aggregated = aggregateItemsByName(items);
   const total = items
     .filter(item => !item.deleted)
     .reduce((sum, item) => sum + item.price * item.qty, 0);
 
   const roundNum = getRoundDisplayId(round.id).replace('R', '');
-  let text = `【第${roundNum}轮】\n`;
+  let text = `【${t('export.round', { n: roundNum })}】\n`;
   
   aggregated.forEach((item) => {
     const notePart = item.note ? ` (${item.note})` : '';
     text += `${item.nameDisplay}${notePart} ${formatMoney(item.price)} × ${item.totalQty}\n`;
   });
 
-  text += `小计: ${formatMoney(total)}\n`;
+  text += `${t('export.subtotal')}: ${formatMoney(total)}\n`;
 
   return text;
 }
@@ -86,10 +91,12 @@ export function generateRoundExportText(
 export function generateFullExportText(
   rounds: Round[],
   allItems: RoundItem[],
-  groupId: string
+  groupId: string,
+  locale: Locale = getDefaultLocale()
 ): string {
+  const t = (key: any, params?: any) => translate(locale, key, params);
   let text = `━━━━━━━━━━━━━━━━\n`;
-  text += `📋 点单汇总 - 桌号: ${groupId}\n`;
+  text += `📋 ${t('export.full.title', { groupId })}\n`;
   text += `━━━━━━━━━━━━━━━━\n\n`;
 
   // 按轮次排序
@@ -103,7 +110,7 @@ export function generateFullExportText(
   sortedRounds.forEach((round) => {
     const roundItems = allItems.filter(item => item.roundId === round.id);
     if (roundItems.length > 0) {
-      text += generateRoundExportText(round, roundItems);
+      text += generateRoundExportText(round, roundItems, locale);
       text += '\n';
       
       const roundTotal = roundItems
@@ -115,7 +122,7 @@ export function generateFullExportText(
 
   // 全部汇总
   text += `━━━━━━━━━━━━━━━━\n`;
-  text += `【全部】\n`;
+  text += `【${t('roundTabs.all')}】\n`;
   
   const allAggregated = aggregateItemsByName(allItems);
   allAggregated.forEach((item) => {
@@ -123,7 +130,7 @@ export function generateFullExportText(
     text += `${item.nameDisplay}${notePart} ${formatMoney(item.price)} × ${item.totalQty}\n`;
   });
 
-  text += `\n合计: ${formatMoney(grandTotal)}\n`;
+  text += `\n${t('export.total')}: ${formatMoney(grandTotal)}\n`;
   text += `━━━━━━━━━━━━━━━━\n`;
 
   return text;
@@ -139,10 +146,12 @@ export function generateFullExportText(
 export function generateUserBillText(
   userName: string,
   rounds: Round[],
-  userItems: RoundItem[]
+  userItems: RoundItem[],
+  locale: Locale = getDefaultLocale()
 ): string {
+  const t = (key: any, params?: any) => translate(locale, key, params);
   let text = `━━━━━━━━━━━━━━━━\n`;
-  text += `💰 ${userName} 的账单\n`;
+  text += `💰 ${t('export.user.title', { userName })}\n`;
   text += `━━━━━━━━━━━━━━━━\n\n`;
 
   const sortedRounds = [...rounds].sort((a, b) => 
@@ -158,7 +167,7 @@ export function generateUserBillText(
     
     if (roundItems.length > 0) {
       const roundNum = getRoundDisplayId(round.id).replace('R', '');
-      text += `【第${roundNum}轮】\n`;
+      text += `【${t('export.round', { n: roundNum })}】\n`;
       
       roundItems.forEach((item) => {
         const notePart = item.note ? ` (${item.note})` : '';
@@ -168,12 +177,12 @@ export function generateUserBillText(
       });
       
       const roundTotal = calculateTotal(roundItems);
-      text += `轮次小计: ${formatMoney(roundTotal)}\n\n`;
+      text += `${t('export.subtotal')}: ${formatMoney(roundTotal)}\n\n`;
     }
   });
 
   text += `━━━━━━━━━━━━━━━━\n`;
-  text += `总计: ${formatMoney(grandTotal)}\n`;
+  text += `${t('export.total')}: ${formatMoney(grandTotal)}\n`;
   text += `━━━━━━━━━━━━━━━━\n`;
 
   return text;
@@ -214,4 +223,3 @@ export async function copyToClipboard(text: string): Promise<boolean> {
     return false;
   }
 }
-

@@ -5,7 +5,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Users, Receipt, Settings, PlayCircle, StopCircle, CheckCircle } from 'lucide-react';
+import { Plus, Users, Receipt, PlayCircle, CheckCircle, BarChart3, X, UtensilsCrossed } from 'lucide-react';
 import { useGroupStore } from '@/store/groupStore';
 import { ItemInput } from '@/components/ItemInput';
 import { MenuPicker } from '@/components/MenuPicker';
@@ -14,12 +14,18 @@ import { OwnerSummary } from '@/components/OwnerSummary';
 import { CheckoutConfirmModal } from '@/components/CheckoutConfirmModal';
 import { SaveRestaurantMenuModal } from '@/components/SaveRestaurantMenuModal';
 import { ImportRestaurantMenuModal } from '@/components/ImportRestaurantMenuModal';
+import { SharedJoinBanner } from '@/components/SharedJoinBanner';
+import { SharedItemCreator } from '@/components/SharedItemCreator';
 import { GroupMenuItem } from '@/types';
 import { getRoundDisplayId } from '@/utils/format';
 import * as api from '@/api/supabaseService';
+import { useI18n } from '@/i18n';
+import { LanguageToggle } from '@/components/LanguageToggle';
+import { calculateTotal } from '@/utils/money';
 
 export const GroupHome: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const {
     currentUser,
     currentGroup,
@@ -34,8 +40,14 @@ export const GroupHome: React.FC = () => {
     updateMenuItemPrice,
     updateMenuItemName,
     addOrderItem,
+    addRoundItem,
     deleteOrderItem,
     updateOrderItem,
+    createSharedItem,
+    joinSharedItem,
+    addParticipantsToSharedItem,
+    removeParticipantFromSharedItem,
+    lockRoundItem,
     createNewRound,
     closeCurrentRound,
     startCheckoutConfirmation,
@@ -50,6 +62,7 @@ export const GroupHome: React.FC = () => {
   } = useGroupStore();
 
   const [showItemInput, setShowItemInput] = useState(false);
+  const [showSharedCreator, setShowSharedCreator] = useState(false);
   const [showOwnerView, setShowOwnerView] = useState(false);
   const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
   const [showSaveMenuModal, setShowSaveMenuModal] = useState(false);
@@ -146,6 +159,24 @@ export const GroupHome: React.FC = () => {
 
   const isOwner = currentUser?.id === currentGroup?.ownerId;
 
+  const ownerHintKey = currentGroup ? `owner_summary_hint_${currentGroup.id}` : '';
+  const [showOwnerHint, setShowOwnerHint] = useState(() => {
+    if (!ownerHintKey) return false;
+    return localStorage.getItem(ownerHintKey) !== 'true';
+  });
+
+  const totals = React.useMemo(() => {
+    const valid = allRoundItems.filter((it) => !it.deleted);
+    const allTotal = calculateTotal(valid);
+    const currentTotal = currentRound ? calculateTotal(valid.filter((it) => it.roundId === currentRound.id)) : 0;
+    return { allTotal, currentTotal };
+  }, [allRoundItems, currentRound]);
+
+  const currentRoundSharedItems =
+    currentRound && currentGroup && !currentGroup.settled
+      ? allRoundItems.filter((it) => it.roundId === currentRound.id && !it.deleted && it.isShared)
+      : [];
+
   // 处理添加菜品
   const handleAddMenuItem = async (item: {
     nameDisplay: string;
@@ -171,9 +202,12 @@ export const GroupHome: React.FC = () => {
         const creatorName = creator?.name || creatorId;
         
         // 显示更友好的对话框
-        const message = `本菜由「${creatorName}」录入，价格为 ¥${result.conflict.existingItem?.price}，与您输入的 ¥${price} 不同。\n\n请选择：\n1. 使用现有价格 ¥${result.conflict.existingItem?.price}\n2. 更新为新价格 ¥${price}`;
-        
-        const useExisting = window.confirm(message + '\n\n点击"确定"=使用现有价格，点击"取消"=更新为新价格');
+        const message = t('home.priceConflictMessage', {
+          creatorName,
+          existingPrice: String(result.conflict.existingItem?.price ?? ''),
+          inputPrice: String(price),
+        });
+        const useExisting = window.confirm(message);
         
         if (useExisting) {
           // 使用现有价格，不添加新项，直接使用现有项添加订单
@@ -265,13 +299,13 @@ export const GroupHome: React.FC = () => {
 
   // 处理轮次操作
   const handleCloseRound = async () => {
-    if (!window.confirm('确认要关闭当前轮次吗？关闭后将生成本轮清单。')) {
+    if (!window.confirm(t('home.closeRoundConfirm'))) {
       return;
     }
 
     try {
       await closeCurrentRound();
-      alert('当前轮次已关闭');
+      alert(t('home.closeRoundDone'));
     } catch (error) {
       alert((error as Error).message);
     }
@@ -280,7 +314,7 @@ export const GroupHome: React.FC = () => {
   const handleStartNewRound = async () => {
     try {
       await createNewRound();
-      alert('新轮次已开启');
+      alert(t('home.startNewRoundDone'));
     } catch (error) {
       alert((error as Error).message);
     }
@@ -301,7 +335,7 @@ export const GroupHome: React.FC = () => {
 
   // Owner开始结账确认流程
   const handleStartCheckout = async () => {
-    if (!window.confirm('确认要结账吗？所有成员需要确认订单后才能最终结账。')) {
+    if (!window.confirm(t('home.checkoutStartConfirm'))) {
       return;
     }
 
@@ -319,7 +353,7 @@ export const GroupHome: React.FC = () => {
   const handleFinalizeCheckout = async () => {
     try {
       await finalizeCheckout();
-      alert('结账完成！');
+      alert(t('home.checkoutFinalizeDone'));
       
       // 重新加载组数据
       if (currentGroup) {
@@ -418,7 +452,7 @@ export const GroupHome: React.FC = () => {
                 <h1 className="text-2xl font-bold">{currentGroup.id}</h1>
                 {currentGroup.settled && (
                   <span className="px-2 py-1 bg-white/20 rounded text-xs">
-                    已结账
+                    {t('home.settled')}
                   </span>
                 )}
               </div>
@@ -432,35 +466,38 @@ export const GroupHome: React.FC = () => {
                     <span>·</span>
                     <span>{getRoundDisplayId(currentRound.id)}</span>
                     <span className="px-2 py-0.5 bg-green-400 text-white rounded text-xs">
-                      进行中
+                      {t('home.roundOpen')}
                     </span>
                   </>
                 )}
                 {!currentRound && (
                   <>
                     <span>·</span>
-                    <span className="text-yellow-200">无进行中的轮次</span>
+                    <span className="text-yellow-200">{t('home.noActiveRound')}</span>
                   </>
                 )}
               </div>
             </div>
             <div className="flex space-x-2">
+              <LanguageToggle />
               <button
                 onClick={() => navigate('/my-bill')}
                 className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                title="我的账单"
+                title={t('home.myBill')}
               >
                 <Receipt size={24} />
               </button>
               {isOwner && (
                 <button
-                  onClick={() => setShowOwnerView(!showOwnerView)}
-                  className={`p-2 rounded-lg transition-colors ${
+                  onClick={() => setShowOwnerView((v) => !v)}
+                  className={`px-3 py-2 rounded-lg transition-colors flex items-center gap-2 ${
                     showOwnerView ? 'bg-white/20' : 'hover:bg-white/10'
                   }`}
-                  title="管理员视图"
+                  title={showOwnerView ? t('home.order') : t('home.summary')}
+                  type="button"
                 >
-                  <Settings size={24} />
+                  {showOwnerView ? <UtensilsCrossed size={20} /> : <BarChart3 size={20} />}
+                  <span className="hidden sm:inline">{showOwnerView ? t('home.order') : t('home.summary')}</span>
                 </button>
               )}
             </div>
@@ -469,6 +506,27 @@ export const GroupHome: React.FC = () => {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+        {/* Owner 一次性引导 */}
+        {isOwner && !showOwnerView && showOwnerHint && !currentGroup.settled && (
+          <div className="bg-white rounded-lg shadow-sm border p-4 flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="font-semibold text-gray-900">{t('home.ownerHintTitle')}</p>
+              <p className="text-sm text-gray-600 mt-1">{t('home.ownerHintBody')}</p>
+            </div>
+            <button
+              className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
+              onClick={() => {
+                setShowOwnerHint(false);
+                if (ownerHintKey) localStorage.setItem(ownerHintKey, 'true');
+              }}
+              title={t('common.close')}
+              type="button"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        )}
+
         {/* Owner视图 */}
         {isOwner && showOwnerView && (
           <div className="space-y-4">
@@ -484,7 +542,7 @@ export const GroupHome: React.FC = () => {
 
             {/* 管理员操作 */}
             <div className="bg-white rounded-lg shadow-sm border p-4 space-y-3">
-              <h3 className="font-semibold text-gray-800 mb-3">轮次管理</h3>
+              <h3 className="font-semibold text-gray-800 mb-3">{t('home.roundManage')}</h3>
               
               {!currentRound && !currentGroup.settled && (
                 <button
@@ -492,7 +550,7 @@ export const GroupHome: React.FC = () => {
                   className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center justify-center space-x-2"
                 >
                   <PlayCircle size={20} />
-                  <span>开启新轮次</span>
+                  <span>{t('home.startNewRound')}</span>
                 </button>
               )}
 
@@ -504,7 +562,7 @@ export const GroupHome: React.FC = () => {
                       className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center justify-center space-x-2"
                     >
                       <CheckCircle size={20} />
-                      <span>最终确认结账</span>
+                      <span>{t('home.checkoutFinalize')}</span>
                     </button>
                   ) : (
                     <button
@@ -512,7 +570,7 @@ export const GroupHome: React.FC = () => {
                       className="w-full py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium flex items-center justify-center space-x-2"
                     >
                       <CheckCircle size={20} />
-                      <span>开始结账</span>
+                      <span>{t('home.checkoutStart')}</span>
                     </button>
                   )}
                 </>
@@ -524,16 +582,78 @@ export const GroupHome: React.FC = () => {
         {/* 普通点单视图 */}
         {(!isOwner || !showOwnerView) && (
           <>
+            {/* Owner 快速汇总入口 */}
+            {isOwner && currentRound && !currentGroup.settled && (
+              <button
+                onClick={() => setShowOwnerView(true)}
+                className="w-full text-left bg-white rounded-2xl shadow-sm border p-4 hover:bg-gray-50"
+                type="button"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm text-gray-500">{t('home.summaryCardTitle')}</p>
+                    <div className="mt-2 flex items-end gap-6">
+                      <div>
+                        <p className="text-xs text-gray-500">{t('home.summaryCardRoundTotal')}</p>
+                        <p className="text-2xl font-bold text-gray-900">{t('money.yen')}{totals.currentTotal.toLocaleString('ja-JP')}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">{t('home.summaryCardAllTotal')}</p>
+                        <p className="text-2xl font-bold text-primary-700">{t('money.yen')}{totals.allTotal.toLocaleString('ja-JP')}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-primary-700 font-semibold">
+                    <BarChart3 size={18} />
+                    <span className="text-sm">{t('home.summaryCardCta')}</span>
+                  </div>
+                </div>
+              </button>
+            )}
+
             {/* 我的订单 */}
             <div>
               <h2 className="text-lg font-semibold text-gray-800 mb-3">
-                我的订单
+                {t('home.myOrder')}
               </h2>
+
+              {/* 当前轮共享入口 */}
+              {currentRound && currentRoundSharedItems.length > 0 && (
+                <SharedJoinBanner
+                  sharedItems={currentRoundSharedItems}
+                  members={members}
+                  currentUserId={currentUser.id}
+                  isOwner={!!isOwner}
+                  onJoin={async (itemId, options) => {
+                    await joinSharedItem(itemId, options);
+                  }}
+                  onAddParticipants={async (itemId, userIds) => {
+                    await addParticipantsToSharedItem(itemId, userIds);
+                  }}
+                  onLock={async (itemId) => {
+                    await lockRoundItem(itemId);
+                  }}
+                />
+              )}
+
               <RoundTabs
                 rounds={rounds}
                 allItems={allRoundItems}
                 currentUserId={currentUser.id}
                 isOwner={isOwner}
+                members={members}
+                onJoinSharedItem={async (itemId, options) => {
+                  await joinSharedItem(itemId, options);
+                }}
+                onAddParticipantsToSharedItem={async (itemId, userIds) => {
+                  await addParticipantsToSharedItem(itemId, userIds);
+                }}
+                onRemoveParticipantFromSharedItem={async (itemId, userId) => {
+                  await removeParticipantFromSharedItem(itemId, userId);
+                }}
+                onLockSharedItem={async (itemId) => {
+                  await lockRoundItem(itemId);
+                }}
                 onDeleteItem={deleteOrderItem}
               />
             </div>
@@ -543,15 +663,24 @@ export const GroupHome: React.FC = () => {
               <div>
                 <div className="flex justify-between items-center mb-3">
                   <h2 className="text-lg font-semibold text-gray-800">
-                    点单区
+                    {t('home.orderArea')}
                   </h2>
-                  <button
-                    onClick={() => setShowItemInput(!showItemInput)}
-                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium flex items-center space-x-2"
-                  >
-                    <Plus size={18} />
-                    <span>新建菜品</span>
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowSharedCreator(true)}
+                      className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-black font-medium flex items-center space-x-2"
+                    >
+                      <Plus size={18} />
+                      <span>{t('home.newShared')}</span>
+                    </button>
+                    <button
+                      onClick={() => setShowItemInput(!showItemInput)}
+                      className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium flex items-center space-x-2"
+                    >
+                      <Plus size={18} />
+                      <span>{t('home.newDish')}</span>
+                    </button>
+                  </div>
                 </div>
 
                 {showItemInput && (
@@ -608,15 +737,15 @@ export const GroupHome: React.FC = () => {
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
                 <p className="text-yellow-800 mb-2">
                   {isOwner 
-                    ? '当前没有进行中的轮次，请开启新轮次开始点单'
-                    : '当前没有进行中的轮次，请等待管理员开启'}
+                    ? t('home.noRoundOwnerHint')
+                    : t('home.noRoundMemberHint')}
                 </p>
                 {isOwner && (
                   <button
                     onClick={handleStartNewRound}
                     className="mt-2 px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium"
                   >
-                    开启新轮次
+                    {t('home.startNewRound')}
                   </button>
                 )}
               </div>
@@ -628,17 +757,17 @@ export const GroupHome: React.FC = () => {
                 <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
                   <CheckCircle size={48} className="mx-auto text-green-600 mb-3" />
                   <p className="text-green-800 text-lg font-medium mb-2">
-                    已完成结账
+                    {t('home.thanksTitle')}
                   </p>
                   <p className="text-green-700 text-sm mb-4">
-                    感谢使用 Ordered，下次再见！
+                    {t('home.thanksSubtitle')}
                   </p>
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     <button
                       onClick={() => navigate('/my-bill')}
                       className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
                     >
-                      查看我的账单
+                      {t('home.gotoMyBill')}
                     </button>
                     <button
                       onClick={() => {
@@ -649,7 +778,7 @@ export const GroupHome: React.FC = () => {
                       }}
                       className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium"
                     >
-                      创建新桌 / 加入新桌
+                      {t('home.createOrJoinNew')}
                     </button>
                     <button
                       onClick={() => {
@@ -660,7 +789,7 @@ export const GroupHome: React.FC = () => {
                       }}
                       className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium"
                     >
-                      重新开始（清除身份）
+                      {t('home.restartClearIdentity')}
                     </button>
                   </div>
                 </div>
@@ -694,9 +823,9 @@ export const GroupHome: React.FC = () => {
             try {
               await saveGroupAsRestaurantMenu(displayName);
               setShowSaveMenuModal(false);
-              alert('店铺菜单保存成功！');
+              alert(t('saveMenu.success'));
             } catch (error) {
-              alert('保存失败：' + (error as Error).message);
+              alert(t('saveMenu.failed', { message: (error as Error).message }));
             }
           }}
           onSkip={() => setShowSaveMenuModal(false)}
@@ -717,7 +846,38 @@ export const GroupHome: React.FC = () => {
           onSkip={() => setShowImportMenuModal(false)}
         />
       )}
+
+      {/* 新建共享条目抽屉 */}
+      {showSharedCreator && currentUser && (
+        <SharedItemCreator
+          isOpen={showSharedCreator}
+          members={members}
+          onClose={() => setShowSharedCreator(false)}
+          onCreate={async (data) => {
+            if (!data.isShared) {
+              await addRoundItem({
+                nameDisplay: data.nameDisplay,
+                price: data.price,
+                qty: data.qty,
+                note: data.note,
+              });
+              return;
+            }
+
+            if (!data.shareMode) throw new Error(t('shared.error.chooseShareMode'));
+            await createSharedItem({
+              nameDisplay: data.nameDisplay,
+              price: data.price,
+              qty: data.qty,
+              note: data.note,
+              shareMode: data.shareMode,
+              shares: data.shares,
+              allowSelfJoin: data.allowSelfJoin,
+              allowClaimUnits: data.allowClaimUnits,
+            });
+          }}
+        />
+      )}
     </div>
   );
 };
-

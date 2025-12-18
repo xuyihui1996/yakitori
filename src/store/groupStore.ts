@@ -20,6 +20,8 @@ import * as mockApi from '@/api/mockService';
 // 如果 Supabase 已配置，使用 Supabase 服务；否则使用 Mock 服务
 const api = isSupabaseConfigured ? supabaseApi : mockApi;
 import { checkMenuConflict } from '@/utils/menu';
+import { computeSharedAllocations, getSharedUnitsRemaining } from '@/utils/split';
+import { tGlobal } from '@/i18n/global';
 
 interface GroupState {
   // 当前状态
@@ -60,6 +62,26 @@ interface GroupState {
   addOrderItem: (item: Omit<RoundItem, 'id' | 'createdAt' | 'groupId' | 'roundId' | 'userId'>) => Promise<void>;
   updateOrderItem: (itemId: string, qty: number) => Promise<void>;
   deleteOrderItem: (itemId: string) => Promise<void>;
+
+  // RoundItem（通用）
+  addRoundItem: (item: Omit<RoundItem, 'id' | 'createdAt' | 'groupId' | 'roundId' | 'userId'>) => Promise<RoundItem>;
+  updateRoundItem: (itemId: string, updates: Partial<RoundItem>) => Promise<void>;
+
+  // 共享条目
+  createSharedItem: (item: {
+    nameDisplay: string;
+    price: number;
+    qty: number;
+    note?: string;
+    shareMode: import('@/types').ShareMode;
+    shares?: import('@/types').RoundItemShare[];
+    allowSelfJoin?: boolean;
+    allowClaimUnits?: boolean;
+  }) => Promise<void>;
+  joinSharedItem: (itemId: string, options?: { weight?: number; units?: number }) => Promise<void>;
+  addParticipantsToSharedItem: (itemId: string, userIds: string[]) => Promise<void>;
+  removeParticipantFromSharedItem: (itemId: string, userId: string) => Promise<void>;
+  lockRoundItem: (itemId: string, options?: { force?: boolean }) => Promise<void>;
 
   // 结账
   startCheckoutConfirmation: () => Promise<void>;
@@ -383,6 +405,19 @@ export const useGroupStore = create<GroupState>((set, get) => ({
     if (!currentRound || !currentUser) return;
 
     try {
+      // 关轮前：自动锁定本轮所有未锁定的共享条目
+      const roundId = currentRound.id;
+      const sharedInRound = get().allRoundItems.filter(
+        (it) => it.roundId === roundId && !it.deleted && it.isShared && it.status !== 'locked'
+      );
+      for (const it of sharedInRound) {
+        try {
+          await get().lockRoundItem(it.id, { force: true });
+        } catch (e) {
+          console.warn('Failed to auto-lock shared item before closing round:', it.id, e);
+        }
+      }
+
       await api.closeRound(currentRound.id, currentUser.id);
       await get().loadRounds();
       await get().loadAllRoundItems();
@@ -393,34 +428,43 @@ export const useGroupStore = create<GroupState>((set, get) => ({
   },
 
   addOrderItem: async (item) => {
+    await get().addRoundItem(item);
+  },
+
+  addRoundItem: async (item) => {
     const { currentGroup, currentRound, currentUser } = get();
     if (!currentGroup || !currentRound || !currentUser) {
       throw new Error('无法添加订单');
     }
 
-    try {
-      const newItem = await api.addRoundItem({
-        ...item,
-        groupId: currentGroup.id,
-        roundId: currentRound.id,
-        userId: currentUser.id
-      });
+    const newItem = await api.addRoundItem({
+      ...item,
+      groupId: currentGroup.id,
+      roundId: currentRound.id,
+      userId: currentUser.id
+    });
 
-      set({ roundItems: [...get().roundItems, newItem] });
-      await get().loadAllRoundItems();
-    } catch (error) {
-      throw error;
+    set({ roundItems: [...get().roundItems, newItem] });
+    await get().loadAllRoundItems();
+    return newItem;
+  },
+
+  updateRoundItem: async (itemId: string, updates: Partial<RoundItem>) => {
+    const { currentUser, currentRound, allRoundItems } = get();
+    if (!currentUser) return;
+
+    await api.updateRoundItem(itemId, currentUser.id, updates);
+
+    const updatedItem = allRoundItems.find((it) => it.id === itemId);
+    if (updatedItem && currentRound && updatedItem.roundId === currentRound.id) {
+      await get().loadRoundItems(currentRound.id);
     }
+    await get().loadAllRoundItems();
   },
 
   updateOrderItem: async (itemId: string, qty: number) => {
-    const { currentUser } = get();
-    if (!currentUser) return;
-
     try {
-      await api.updateRoundItem(itemId, currentUser.id, { qty });
-      await get().loadRoundItems(get().currentRound?.id || '');
-      await get().loadAllRoundItems();
+      await get().updateRoundItem(itemId, { qty });
     } catch (error) {
       console.error('Failed to update order item:', error);
       throw error;
@@ -433,12 +477,194 @@ export const useGroupStore = create<GroupState>((set, get) => ({
 
     try {
       await api.deleteRoundItem(itemId, currentUser.id);
-      await get().loadRoundItems(get().currentRound?.id || '');
+      if (get().currentRound?.id) {
+        await get().loadRoundItems(get().currentRound!.id);
+      }
       await get().loadAllRoundItems();
     } catch (error) {
       console.error('Failed to delete order item:', error);
       throw error;
     }
+  },
+
+  createSharedItem: async (item) => {
+    await get().addRoundItem({
+      nameDisplay: item.nameDisplay,
+      price: item.price,
+      qty: item.qty,
+      note: item.note,
+      isShared: true,
+      shareMode: item.shareMode,
+      shares: item.shares ?? [],
+      status: (item.shares?.length ?? 0) > 0 ? 'active' : 'pending',
+      allowSelfJoin: item.allowSelfJoin ?? true,
+      allowClaimUnits: item.allowClaimUnits ?? true
+    });
+  },
+
+  joinSharedItem: async (itemId, options) => {
+    const { currentUser, currentGroup, allRoundItems } = get();
+    if (!currentUser || !currentGroup) throw new Error('未登录或未加入组');
+
+    const item = allRoundItems.find((it) => it.id === itemId);
+    if (!item || !item.isShared) throw new Error('共享条目不存在');
+    if (item.status === 'locked') throw new Error('已锁定，无法修改');
+
+    const isOwner = currentGroup.ownerId === currentUser.id;
+    const isCreator = item.userId === currentUser.id;
+
+    if (!isOwner && !isCreator) {
+      if (item.shareMode === 'units') {
+        if (item.allowClaimUnits === false) throw new Error('创建人未开放认领');
+      } else {
+        if (item.allowSelfJoin === false) throw new Error('创建人未开放自助加入');
+      }
+    }
+
+    const shares = Array.isArray(item.shares) ? [...item.shares] : [];
+    const existingIdx = shares.findIndex((s) => s.userId === currentUser.id);
+
+    const upsert = (next: import('@/types').RoundItemShare | null) => {
+      const nextShares = shares.filter((s) => s.userId !== currentUser.id);
+      if (next) nextShares.push(next);
+      return nextShares;
+    };
+
+    let nextShares = shares;
+    if (item.shareMode === 'ratio') {
+      const weight = Math.max(1, Math.floor(options?.weight ?? 1));
+      const existing = existingIdx >= 0 ? shares[existingIdx] : undefined;
+      nextShares = existing
+        ? shares.map((s) => (s.userId === currentUser.id ? { ...s, weight } : s))
+        : [...shares, { userId: currentUser.id, weight }];
+    } else if (item.shareMode === 'units') {
+      const totalUnits = Math.max(0, Math.floor(item.qty));
+      const currentUnits = existingIdx >= 0 ? Math.max(0, Math.floor(shares[existingIdx].units ?? 0)) : 0;
+      const requestUnits = Math.max(0, Math.floor(options?.units ?? 0));
+
+      const used = shares.reduce((sum, s) => sum + Math.max(0, Math.floor(s.units ?? 0)), 0);
+      const usedWithoutMe = used - currentUnits;
+      if (requestUnits + usedWithoutMe > totalUnits) {
+        const remaining = getSharedUnitsRemaining(item) ?? 0;
+        throw new Error(tGlobal('shared.error.unitsInsufficient', { remaining }));
+      }
+
+      if (requestUnits === 0) {
+        nextShares = upsert(null);
+      } else {
+        nextShares = upsert({ userId: currentUser.id, units: requestUnits });
+      }
+    } else {
+      // equal
+      if (existingIdx >= 0) return;
+      nextShares = [...shares, { userId: currentUser.id }];
+    }
+
+    const nextStatus =
+      nextShares.length === 0 ? 'pending' : (item.status === 'pending' || !item.status ? 'active' : item.status);
+
+    await get().updateRoundItem(itemId, { shares: nextShares, status: nextStatus });
+  },
+
+  addParticipantsToSharedItem: async (itemId, userIds) => {
+    const { currentUser, currentGroup, allRoundItems } = get();
+    if (!currentUser || !currentGroup) throw new Error('未登录或未加入组');
+
+    const item = allRoundItems.find((it) => it.id === itemId);
+    if (!item || !item.isShared) throw new Error('共享条目不存在');
+    if (item.status === 'locked') throw new Error('已锁定，无法修改');
+
+    const canManage = currentGroup.ownerId === currentUser.id || item.userId === currentUser.id;
+    if (!canManage) throw new Error('无权操作');
+
+    if (item.shareMode === 'units') {
+      throw new Error('按份数模式请由成员自行认领');
+    }
+
+    const shares = Array.isArray(item.shares) ? [...item.shares] : [];
+    const existing = new Set(shares.map((s) => s.userId));
+    const additions = userIds
+      .filter((uid) => uid && !existing.has(uid))
+      .map((uid) => (item.shareMode === 'ratio' ? { userId: uid, weight: 1 } : { userId: uid }));
+
+    const nextShares = [...shares, ...additions];
+    const nextStatus =
+      nextShares.length === 0 ? 'pending' : (item.status === 'pending' || !item.status ? 'active' : item.status);
+
+    await get().updateRoundItem(itemId, { shares: nextShares, status: nextStatus });
+  },
+
+  removeParticipantFromSharedItem: async (itemId, userId) => {
+    const { currentUser, currentGroup, allRoundItems } = get();
+    if (!currentUser || !currentGroup) throw new Error('未登录或未加入组');
+
+    const item = allRoundItems.find((it) => it.id === itemId);
+    if (!item || !item.isShared) throw new Error('共享条目不存在');
+    if (item.status === 'locked') throw new Error('已锁定，无法修改');
+
+    const canManage = currentGroup.ownerId === currentUser.id || item.userId === currentUser.id;
+    if (!canManage) throw new Error('无权操作');
+
+    const shares = Array.isArray(item.shares) ? item.shares : [];
+    const nextShares = shares.filter((s) => s.userId !== userId);
+    const nextStatus = nextShares.length === 0 ? 'pending' : (item.status === 'pending' || !item.status ? 'active' : item.status);
+    await get().updateRoundItem(itemId, { shares: nextShares, status: nextStatus });
+  },
+
+  lockRoundItem: async (itemId, options) => {
+    const { currentUser, currentGroup, allRoundItems } = get();
+    if (!currentUser || !currentGroup) throw new Error('未登录或未加入组');
+
+    const item = allRoundItems.find((it) => it.id === itemId);
+    if (!item || !item.isShared) throw new Error('共享条目不存在');
+    if (item.status === 'locked') return;
+
+    const canManage = currentGroup.ownerId === currentUser.id || item.userId === currentUser.id;
+    if (!canManage) throw new Error('无权操作');
+
+    let nextShares = Array.isArray(item.shares) ? [...item.shares] : [];
+
+    if (options?.force) {
+      if (nextShares.length === 0) {
+        nextShares = item.shareMode === 'units'
+          ? [{ userId: item.userId, units: Math.max(0, Math.floor(item.qty)) }]
+          : [{ userId: item.userId, weight: 1 }];
+      }
+
+      if (item.shareMode === 'units') {
+        const remaining = getSharedUnitsRemaining({ ...item, shares: nextShares } as RoundItem);
+        if (remaining && remaining > 0) {
+          const idx = nextShares.findIndex((s) => s.userId === item.userId);
+          if (idx >= 0) {
+            nextShares[idx] = {
+              ...nextShares[idx],
+              units: Math.max(0, Math.floor(nextShares[idx].units ?? 0)) + remaining,
+            };
+          } else {
+            nextShares.push({ userId: item.userId, units: remaining });
+          }
+        }
+      }
+    }
+
+    let allocations: Array<{ userId: string; amountYen: number }>;
+    try {
+      allocations = computeSharedAllocations({ ...item, shares: nextShares }, { allowPartialUnits: false });
+    } catch (e) {
+      const msg = (e as Error).message;
+      if (msg === 'UNITS_NOT_FULLY_CLAIMED') {
+        throw new Error(tGlobal('shared.error.unitsNotFullyClaimed'));
+      }
+      throw e;
+    }
+
+    const amountMap = new Map(allocations.map((a) => [a.userId, a.amountYen]));
+    nextShares = nextShares.map((s) => ({
+      ...s,
+      amountYen: amountMap.get(s.userId),
+    }));
+
+    await get().updateRoundItem(itemId, { shares: nextShares, status: 'locked' });
   },
 
   startCheckoutConfirmation: async () => {
@@ -472,6 +698,16 @@ export const useGroupStore = create<GroupState>((set, get) => ({
     if (!currentGroup || !currentUser) return;
 
     try {
+      // 结账前：自动锁定所有未锁定共享条目（避免账单仍记在创建者名下/试算不稳定）
+      const sharedToLock = get().allRoundItems.filter((it) => it.isShared && !it.deleted && it.status !== 'locked');
+      for (const it of sharedToLock) {
+        try {
+          await get().lockRoundItem(it.id, { force: true });
+        } catch (e) {
+          console.warn('Failed to auto-lock shared item before checkout:', it.id, e);
+        }
+      }
+
       await api.finalizeCheckout(currentGroup.id, currentUser.id);
       await get().loadGroup(currentGroup.id);
     } catch (error) {
@@ -485,6 +721,15 @@ export const useGroupStore = create<GroupState>((set, get) => ({
     if (!currentGroup || !currentUser) return;
 
     try {
+      const sharedToLock = get().allRoundItems.filter((it) => it.isShared && !it.deleted && it.status !== 'locked');
+      for (const it of sharedToLock) {
+        try {
+          await get().lockRoundItem(it.id, { force: true });
+        } catch (e) {
+          console.warn('Failed to auto-lock shared item before settle:', it.id, e);
+        }
+      }
+
       await api.settleGroup(currentGroup.id, currentUser.id);
       await get().loadGroup(currentGroup.id);
     } catch (error) {
@@ -577,4 +822,3 @@ export const useGroupStore = create<GroupState>((set, get) => ({
     });
   }
 }));
-

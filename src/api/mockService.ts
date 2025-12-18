@@ -28,6 +28,9 @@ import { generateShortId, generateUniqueId } from '@/utils/format';
 import { aggregateItemsByName } from '@/utils/export';
 import { calculateTotal } from '@/utils/money';
 import { normalizeDishName } from '@/utils/nameNormalize';
+import { getUserOwedYenForRoundItem } from '@/utils/split';
+import { getDefaultLocale } from '@/i18n';
+import { translate } from '@/i18n/global';
 
 // 内存存储
 let groups: Group[] = [mockGroup];
@@ -582,13 +585,36 @@ export async function getUserBill(groupId: string, userId: string): Promise<User
     throw new Error('用户不存在');
   }
 
+  const locale = getDefaultLocale();
+  const sharedSuffix = translate(locale, 'bill.sharedSuffix');
+
   const groupRounds = rounds.filter(r => r.groupId === groupId);
-  const userItems = roundItems.filter(
-    item => item.groupId === groupId && item.userId === userId && !item.deleted
-  );
+  const groupItems = roundItems.filter(item => item.groupId === groupId && !item.deleted);
 
   const roundBills = groupRounds.map(round => {
-    const items = userItems.filter(item => item.roundId === round.id);
+    const itemsInRound = groupItems.filter(item => item.roundId === round.id);
+    const normalItems = itemsInRound.filter(item => !item.isShared && item.userId === userId);
+    const sharedItems = itemsInRound.filter(item => item.isShared && (item.shares || []).some(s => s.userId === userId));
+
+    const sharedVirtualItems: RoundItem[] = sharedItems
+      .map((it) => {
+        const amountYen = getUserOwedYenForRoundItem(it, userId);
+        if (!amountYen) return null;
+        return {
+          id: `${it.id}_share_${userId}`,
+          groupId: it.groupId,
+          roundId: it.roundId,
+          userId,
+          nameDisplay: `${it.nameDisplay}${sharedSuffix}`,
+          price: amountYen,
+          qty: 1,
+          note: it.note,
+          createdAt: it.createdAt,
+        } as RoundItem;
+      })
+      .filter(Boolean) as RoundItem[];
+
+    const items = [...normalItems, ...sharedVirtualItems];
     return {
       roundId: round.id,
       items,
@@ -1066,4 +1092,3 @@ export async function importRestaurantMenuToGroup(
     conflicts
   };
 }
-

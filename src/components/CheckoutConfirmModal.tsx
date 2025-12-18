@@ -7,6 +7,7 @@ import React, { useState, useMemo } from 'react';
 import { X, Check, Plus, Minus } from 'lucide-react';
 import { RoundItem, MergedOrderItem } from '@/types';
 import { formatMoney } from '@/utils/money';
+import { useI18n } from '@/i18n';
 
 interface CheckoutConfirmModalProps {
   isOpen: boolean;
@@ -33,6 +34,7 @@ export const CheckoutConfirmModal: React.FC<CheckoutConfirmModalProps> = ({
   onDeleteExtraItem,
   disabled = false
 }) => {
+  const { t } = useI18n();
   const [showExtraRound, setShowExtraRound] = useState(false);
   const [selectedMenuItem, setSelectedMenuItem] = useState<string>('');
   const [adjustmentQty, setAdjustmentQty] = useState(0);
@@ -108,7 +110,7 @@ export const CheckoutConfirmModal: React.FC<CheckoutConfirmModalProps> = ({
   // 添加Extra round调整项
   const handleAddExtraItem = async () => {
     if (!selectedMenuItem || adjustmentQty === 0) {
-      alert('请选择菜品并输入调整数量');
+      alert(t('checkout.needSelectAndQty'));
       return;
     }
 
@@ -121,11 +123,11 @@ export const CheckoutConfirmModal: React.FC<CheckoutConfirmModalProps> = ({
         m => m.nameDisplay === nameDisplay && m.price === price
       );
       if (!originalItem) {
-        alert('找不到原始订单项');
+        alert(t('checkout.cannotFindOriginal'));
         return;
       }
       if (Math.abs(adjustmentQty) > originalItem.totalQty) {
-        alert(`未上的数量不能超过原始订单总数（${originalItem.totalQty}）`);
+        alert(t('checkout.removeExceed', { totalQty: originalItem.totalQty }));
         return;
       }
     }
@@ -155,7 +157,7 @@ export const CheckoutConfirmModal: React.FC<CheckoutConfirmModalProps> = ({
             m => m.nameDisplay === extraItem.nameDisplay && m.price === extraItem.price
           );
           if (originalItem && Math.abs(newQty) > originalItem.totalQty) {
-            alert(`未上的数量不能超过原始订单总数（${originalItem.totalQty}）`);
+            alert(t('checkout.removeExceed', { totalQty: originalItem.totalQty }));
             setLoading(false);
             return;
           }
@@ -172,7 +174,7 @@ export const CheckoutConfirmModal: React.FC<CheckoutConfirmModalProps> = ({
 
   // 删除Extra round调整项
   const handleDeleteExtraItem = async (itemId: string) => {
-    if (!window.confirm('确认删除此调整项？')) return;
+    if (!window.confirm(t('checkout.deleteConfirm'))) return;
     
     setLoading(true);
     try {
@@ -204,7 +206,7 @@ export const CheckoutConfirmModal: React.FC<CheckoutConfirmModalProps> = ({
       <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* 头部 */}
         <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-xl font-bold text-gray-900">请确认您的订单</h2>
+          <h2 className="text-xl font-bold text-gray-900">{t('checkout.title')}</h2>
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -219,12 +221,12 @@ export const CheckoutConfirmModal: React.FC<CheckoutConfirmModalProps> = ({
           {/* 合并后的订单列表 */}
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-3">
-              【{userName} 的账单汇总】
+              {t('checkout.summaryTitle', { userName })}
             </h3>
             
             {finalItems.length === 0 ? (
               <div className="p-8 text-center text-gray-500">
-                暂无订单
+                {t('roundTabs.empty')}
               </div>
             ) : (
               <div className="space-y-3">
@@ -250,11 +252,11 @@ export const CheckoutConfirmModal: React.FC<CheckoutConfirmModalProps> = ({
                           </p>
                         )}
                         <div className="flex items-center space-x-2 mt-2 text-sm text-gray-600">
-                          <span>原始: {item.totalQty}</span>
+                          <span>{t('checkout.originalQty', { qty: item.totalQty })}</span>
                           {item.adjustmentQty !== 0 && (
                             <>
                               <span className="text-gray-400">→</span>
-                              <span className="font-medium text-gray-900">最终: {item.finalQty}</span>
+                              <span className="font-medium text-gray-900">{t('checkout.finalQty', { qty: item.finalQty })}</span>
                             </>
                           )}
                         </div>
@@ -271,7 +273,7 @@ export const CheckoutConfirmModal: React.FC<CheckoutConfirmModalProps> = ({
             {/* 总计 */}
             <div className="mt-4 pt-4 border-t">
               <div className="flex justify-between items-center">
-                <span className="text-lg font-semibold text-gray-900">总计</span>
+                <span className="text-lg font-semibold text-gray-900">{t('export.total')}</span>
                 <span className="text-xl font-bold text-primary-600">
                   {formatMoney(grandTotal)}
                 </span>
@@ -282,12 +284,12 @@ export const CheckoutConfirmModal: React.FC<CheckoutConfirmModalProps> = ({
           {/* Extra Round 调整区域 */}
           <div className="border-t pt-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">数量调整（Extra Round）</h3>
+              <h3 className="text-lg font-semibold text-gray-900">{t('checkout.extraTitle')}</h3>
               <button
                 onClick={() => setShowExtraRound(!showExtraRound)}
                 className="text-sm text-primary-600 hover:text-primary-700 font-medium"
               >
-                {showExtraRound ? '收起' : '展开'}
+                {showExtraRound ? t('checkout.collapse') : t('checkout.expand')}
               </button>
             </div>
 
@@ -295,22 +297,22 @@ export const CheckoutConfirmModal: React.FC<CheckoutConfirmModalProps> = ({
               <div className="space-y-4">
                 {/* 添加调整项表单 */}
                 <div className="border rounded-lg p-4 bg-gray-50">
-                  <h4 className="text-sm font-medium text-gray-700 mb-3">添加调整</h4>
+                  <h4 className="text-sm font-medium text-gray-700 mb-3">{t('checkout.addAdjust')}</h4>
                   
                   <div className="space-y-3">
                     {/* 选择菜品 */}
                     <div>
-                      <label className="block text-sm text-gray-600 mb-1">选择菜品</label>
+                      <label className="block text-sm text-gray-600 mb-1">{t('checkout.selectDish')}</label>
                       <select
                         value={selectedMenuItem}
                         onChange={(e) => setSelectedMenuItem(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                         disabled={loading || disabled}
                       >
-                        <option value="">请选择...</option>
+                        <option value="">{t('checkout.selectPlaceholder')}</option>
                         {userOrderedItems.map((item) => (
                           <option key={`${item.nameDisplay}_${item.price}`} value={`${item.nameDisplay}|${item.price}`}>
-                            {item.nameDisplay} (¥{item.price}) - 原始数量: {item.totalQty}
+                            {t('checkout.selectOption', { name: item.nameDisplay, price: item.price, qty: item.totalQty })}
                           </option>
                         ))}
                       </select>
@@ -318,7 +320,7 @@ export const CheckoutConfirmModal: React.FC<CheckoutConfirmModalProps> = ({
 
                     {/* 调整类型 */}
                     <div>
-                      <label className="block text-sm text-gray-600 mb-1">调整类型</label>
+                      <label className="block text-sm text-gray-600 mb-1">{t('checkout.adjustType')}</label>
                       <div className="flex space-x-3">
                         <button
                           onClick={() => setAdjustmentType('remove')}
@@ -329,7 +331,7 @@ export const CheckoutConfirmModal: React.FC<CheckoutConfirmModalProps> = ({
                           }`}
                           disabled={loading || disabled}
                         >
-                          未上（减少）
+                          {t('checkout.typeRemove')}
                         </button>
                         <button
                           onClick={() => setAdjustmentType('add')}
@@ -340,14 +342,14 @@ export const CheckoutConfirmModal: React.FC<CheckoutConfirmModalProps> = ({
                           }`}
                           disabled={loading || disabled}
                         >
-                          多吃（增加）
+                          {t('checkout.typeAdd')}
                         </button>
                       </div>
                     </div>
 
                     {/* 调整数量 */}
                     <div>
-                      <label className="block text-sm text-gray-600 mb-1">调整数量</label>
+                      <label className="block text-sm text-gray-600 mb-1">{t('checkout.adjustQty')}</label>
                       <input
                         type="number"
                         min="1"
@@ -364,7 +366,7 @@ export const CheckoutConfirmModal: React.FC<CheckoutConfirmModalProps> = ({
                       disabled={loading || disabled || !selectedMenuItem || adjustmentQty <= 0}
                       className="w-full py-2 px-4 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                      添加调整
+                      {t('checkout.addAdjust')}
                     </button>
                   </div>
                 </div>
@@ -372,7 +374,7 @@ export const CheckoutConfirmModal: React.FC<CheckoutConfirmModalProps> = ({
                 {/* 现有调整项列表 */}
                 {extraRoundItems.filter(item => !item.deleted).length > 0 && (
                   <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">当前调整</h4>
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">{t('checkout.currentAdjust')}</h4>
                     <div className="space-y-2">
                       {extraRoundItems
                         .filter(item => !item.deleted)
@@ -392,7 +394,7 @@ export const CheckoutConfirmModal: React.FC<CheckoutConfirmModalProps> = ({
                                 onClick={() => handleUpdateExtraItem(item.id, item.qty + (item.qty > 0 ? 1 : -1))}
                                 className="p-1 hover:bg-gray-100 rounded transition-colors"
                                 disabled={loading || disabled}
-                                title="增加调整量"
+                                title={t('checkout.increase')}
                               >
                                 <Plus size={16} className="text-gray-600" />
                               </button>
@@ -400,7 +402,7 @@ export const CheckoutConfirmModal: React.FC<CheckoutConfirmModalProps> = ({
                                 onClick={() => handleUpdateExtraItem(item.id, item.qty - (item.qty > 0 ? 1 : -1))}
                                 className="p-1 hover:bg-gray-100 rounded transition-colors"
                                 disabled={loading || disabled || (item.qty < 0 && Math.abs(item.qty) >= (mergedItems.find(m => m.nameDisplay === item.nameDisplay && m.price === item.price)?.totalQty || 0))}
-                                title="减少调整量"
+                                title={t('checkout.decrease')}
                               >
                                 <Minus size={16} className="text-gray-600" />
                               </button>
@@ -408,7 +410,7 @@ export const CheckoutConfirmModal: React.FC<CheckoutConfirmModalProps> = ({
                                 onClick={() => handleDeleteExtraItem(item.id)}
                                 className="p-1 hover:bg-red-50 rounded transition-colors"
                                 disabled={loading || disabled}
-                                title="删除"
+                                title={t('common.delete')}
                               >
                                 <X size={16} className="text-red-600" />
                               </button>
@@ -430,7 +432,7 @@ export const CheckoutConfirmModal: React.FC<CheckoutConfirmModalProps> = ({
             disabled={loading || disabled}
             className="flex-1 py-3 px-4 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            取消
+            {t('common.cancel')}
           </button>
           <button
             onClick={handleConfirm}
@@ -440,12 +442,12 @@ export const CheckoutConfirmModal: React.FC<CheckoutConfirmModalProps> = ({
             {loading ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                <span>确认中...</span>
+                <span>{t('checkout.confirming')}</span>
               </>
             ) : (
               <>
                 <Check size={18} />
-                <span>确认订单</span>
+                <span>{t('checkout.confirm')}</span>
               </>
             )}
           </button>

@@ -8,10 +8,13 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, LogIn, Copy, Check } from 'lucide-react';
 import { useGroupStore } from '@/store/groupStore';
 import { generateQRCodeDataURL, generateJoinLink } from '@/utils/qrcode';
+import { useI18n } from '@/i18n';
+import { LanguageToggle } from '@/components/LanguageToggle';
 
 export const JoinGroup: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { t } = useI18n();
   const { 
     createGroup, 
     joinGroup, 
@@ -89,7 +92,7 @@ export const JoinGroup: React.FC = () => {
     e.preventDefault();
     
     if (!name.trim()) {
-      setError('请输入您的昵称');
+      setError(t('join.needName'));
       return;
     }
 
@@ -145,12 +148,12 @@ export const JoinGroup: React.FC = () => {
     e.preventDefault();
     
     if (!name.trim()) {
-      setError('请输入您的昵称');
+      setError(t('join.needName'));
       return;
     }
 
     if (!groupId.trim()) {
-      setError('请输入桌号');
+      setError(t('join.needGroupId'));
       return;
     }
 
@@ -172,8 +175,15 @@ export const JoinGroup: React.FC = () => {
       <div className="w-full max-w-md">
         {/* Logo区域 */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-primary-700 mb-2">Ordered</h1>
-          <p className="text-gray-600">多人点单，一起AA</p>
+          <div className="flex items-center justify-center gap-3">
+            <h1 className="text-4xl font-bold text-primary-700 mb-2">Ordered</h1>
+            <div className="mb-2">
+              <LanguageToggle
+                className="px-3 py-2 rounded-lg bg-white text-gray-800 border border-gray-200 hover:bg-gray-50 text-sm font-medium flex items-center gap-2"
+              />
+            </div>
+          </div>
+          <p className="text-gray-600">{t('join.tagline')}</p>
         </div>
 
         {/* 主卡片 */}
@@ -189,7 +199,7 @@ export const JoinGroup: React.FC = () => {
               }`}
             >
               <Plus size={20} className="inline mr-2" />
-              创建新桌
+              {t('join.createTab')}
             </button>
             <button
               onClick={() => setMode('join')}
@@ -200,7 +210,7 @@ export const JoinGroup: React.FC = () => {
               }`}
             >
               <LogIn size={20} className="inline mr-2" />
-              加入桌
+              {t('join.joinTab')}
             </button>
           </div>
 
@@ -210,18 +220,18 @@ export const JoinGroup: React.FC = () => {
               <form onSubmit={handleCreate} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    您的昵称 *
+                    {t('join.nameLabel')}
                   </label>
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="例：小明"
+                    placeholder={t('join.namePlaceholderCreate')}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                     required
                   />
                   <p className="mt-1 text-xs text-gray-500">
-                    作为桌主，您可以管理轮次和结账
+                    {t('join.ownerHint')}
                   </p>
                 </div>
 
@@ -236,20 +246,20 @@ export const JoinGroup: React.FC = () => {
                   disabled={loading}
                   className="w-full py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-lg"
                 >
-                  {loading ? '创建中...' : '创建并开始点单'}
+                  {loading ? t('join.creating') : t('join.createAndStart')}
                 </button>
               </form>
             ) : (
               <form onSubmit={handleJoin} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    桌号 *
+                    {t('join.groupIdLabel')}
                   </label>
                   <input
                     type="text"
                     value={groupId}
                     onChange={(e) => setGroupId(e.target.value.toUpperCase())}
-                    placeholder="例：G123456"
+                    placeholder={t('join.groupIdPlaceholder')}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-lg"
                     required
                   />
@@ -257,13 +267,13 @@ export const JoinGroup: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    您的昵称 *
+                    {t('join.nameLabel')}
                   </label>
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="例：小红"
+                    placeholder={t('join.namePlaceholderJoin')}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                     required
                   />
@@ -280,7 +290,7 @@ export const JoinGroup: React.FC = () => {
                   disabled={loading}
                   className="w-full py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-lg"
                 >
-                  {loading ? '加入中...' : '加入并开始点单'}
+                  {loading ? t('join.joining') : t('join.joinAndStart')}
                 </button>
               </form>
             )}
@@ -289,7 +299,7 @@ export const JoinGroup: React.FC = () => {
 
         {/* 底部说明 */}
         <div className="mt-6 text-center text-sm text-gray-600">
-          <p>数据保留7天 · 支持多轮点单 · 自动汇总</p>
+          <p>{t('join.footer')}</p>
         </div>
       </div>
 
@@ -319,17 +329,18 @@ export const JoinGroup: React.FC = () => {
             {/* 调试信息 */}
             {process.env.NODE_ENV === 'development' && (
               <div className="mb-2 text-xs text-gray-400">
-                调试: createdGroupId={createdGroupId ? '已设置' : '未设置'}, qrCodeUrl={qrCodeUrl ? `已设置(${qrCodeUrl.length}字符)` : '未设置'}
+                {t('join.debug')}: createdGroupId={createdGroupId ? 'OK' : 'NG'}, qrCodeUrl={qrCodeUrl ? `OK(${qrCodeUrl.length})` : 'NG'}
               </div>
             )}
             <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">
-              创建成功！
+              {t('join.createdTitle')}
             </h3>
             <p className="text-sm text-gray-600 mb-2 text-center">
-              桌号：<span className="font-mono font-bold text-primary-600">{createdGroupId}</span>
+              {t('join.tableNo')}
+              <span className="font-mono font-bold text-primary-600">{createdGroupId}</span>
             </p>
             <p className="text-sm text-gray-600 mb-4 text-center">
-              扫码加入或分享链接给好友
+              {t('join.createdSubtitle')}
             </p>
             
             {/* 二维码 - 强制渲染版本 */}
@@ -364,9 +375,9 @@ export const JoinGroup: React.FC = () => {
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <p className="text-gray-500 text-sm text-center px-4">
-                      二维码生成中...
+                      {t('join.qrGenerating')}
                       <br />
-                      或手动分享桌号
+                      {t('join.qrFallback')}
                     </p>
                   </div>
                 )}
@@ -385,7 +396,7 @@ export const JoinGroup: React.FC = () => {
                 <button
                   onClick={handleCopyLink}
                   className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-                  title="复制链接"
+                  title={t('join.copyLink')}
                 >
                   {linkCopied ? (
                     <Check size={18} className="text-green-600" />
@@ -406,13 +417,13 @@ export const JoinGroup: React.FC = () => {
                 }}
                 className="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
               >
-                返回
+                {t('common.back')}
               </button>
               <button
                 onClick={handleContinueToGroup}
                 className="flex-1 py-2 px-4 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
               >
-                进入点单
+                {t('join.enterOrder')}
               </button>
             </div>
           </div>
@@ -421,4 +432,3 @@ export const JoinGroup: React.FC = () => {
     </div>
   );
 };
-

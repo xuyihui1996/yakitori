@@ -33,6 +33,9 @@ import { generateShortId, generateUniqueId } from '@/utils/format';
 import { aggregateItemsByName } from '@/utils/export';
 import { calculateTotal } from '@/utils/money';
 import { normalizeDishName } from '@/utils/nameNormalize';
+import { getUserOwedYenForRoundItem } from '@/utils/split';
+import { getDefaultLocale } from '@/i18n';
+import { translate } from '@/i18n/global';
 
 // ============ 用户相关 ============
 
@@ -809,6 +812,12 @@ export async function getRoundItems(roundId: string): Promise<RoundItem[]> {
     menuItemId: item.menu_item_id,
     userNameSnapshot: item.user_name_snapshot,
     updatedBy: item.updated_by,
+    isShared: item.is_shared ?? undefined,
+    shareMode: item.share_mode ?? undefined,
+    shares: item.shares ?? undefined,
+    status: item.share_status ?? undefined,
+    allowSelfJoin: item.allow_self_join ?? undefined,
+    allowClaimUnits: item.allow_claim_units ?? undefined,
   })) as RoundItem[];
 }
 
@@ -830,7 +839,7 @@ export async function addRoundItem(
     throw new Error('该轮次已关闭，无法添加订单');
   }
 
-  const newItem = {
+  const newItem: any = {
     id: generateUniqueId('RI'),
     group_id: item.groupId,
     round_id: item.roundId,
@@ -842,6 +851,13 @@ export async function addRoundItem(
     created_at: new Date().toISOString(),
     deleted: false,
   };
+
+  if (item.isShared !== undefined) newItem.is_shared = item.isShared;
+  if (item.shareMode !== undefined) newItem.share_mode = item.shareMode;
+  if (item.shares !== undefined) newItem.shares = item.shares;
+  if (item.status !== undefined) newItem.share_status = item.status;
+  if (item.allowSelfJoin !== undefined) newItem.allow_self_join = item.allowSelfJoin;
+  if (item.allowClaimUnits !== undefined) newItem.allow_claim_units = item.allowClaimUnits;
 
   const addItemClient = ensureSupabase();
   const { data, error } = await addItemClient
@@ -865,6 +881,12 @@ export async function addRoundItem(
     qty: data.qty,
     note: data.note,
     createdAt: data.created_at,
+    isShared: data.is_shared ?? undefined,
+    shareMode: data.share_mode ?? undefined,
+    shares: data.shares ?? undefined,
+    status: data.share_status ?? undefined,
+    allowSelfJoin: data.allow_self_join ?? undefined,
+    allowClaimUnits: data.allow_claim_units ?? undefined,
   } as RoundItem;
 }
 
@@ -880,7 +902,7 @@ export async function updateRoundItem(
   const itemClient = ensureSupabase();
   const { data: itemData } = await itemClient
     .from('round_items')
-    .select('user_id, group_id')
+    .select('user_id, group_id, is_shared')
     .eq('id', itemId)
     .single();
 
@@ -892,12 +914,38 @@ export async function updateRoundItem(
   const groupClient = ensureSupabase();
   const { data: groupData } = await groupClient
     .from('groups')
-    .select('owner_id')
+    .select('owner_id, members')
     .eq('id', itemData.group_id)
     .single();
 
-  if (itemData.user_id !== userId && groupData?.owner_id !== userId) {
-    throw new Error('无权修改此订单');
+  const isOwner = groupData?.owner_id === userId;
+  const isCreator = itemData.user_id === userId;
+  const isGroupMember = Array.isArray(groupData?.members) && groupData!.members.includes(userId);
+
+  const isSharedUpdate =
+    updates.isShared !== undefined ||
+    updates.shareMode !== undefined ||
+    updates.status !== undefined ||
+    updates.shares !== undefined ||
+    updates.allowSelfJoin !== undefined ||
+    updates.allowClaimUnits !== undefined;
+
+  const touchesNonSharedFields =
+    updates.qty !== undefined ||
+    updates.price !== undefined ||
+    updates.note !== undefined ||
+    updates.nameDisplay !== undefined ||
+    updates.menuItemId !== undefined ||
+    updates.userNameSnapshot !== undefined ||
+    updates.deleted !== undefined ||
+    updates.deletedBy !== undefined;
+
+  // 共享条目允许组内成员写入 shares/status（用于自助加入/认领）
+  if (!isOwner && !isCreator) {
+    const canEditSharedAsMember = !!itemData.is_shared && isGroupMember && isSharedUpdate && !touchesNonSharedFields;
+    if (!canEditSharedAsMember) {
+      throw new Error('无权修改此订单');
+    }
   }
 
   const updateData: any = {
@@ -906,6 +954,14 @@ export async function updateRoundItem(
 
   if (updates.qty !== undefined) updateData.qty = updates.qty;
   if (updates.price !== undefined) updateData.price = updates.price;
+  if (updates.note !== undefined) updateData.note = updates.note;
+  if (updates.nameDisplay !== undefined) updateData.name_display = updates.nameDisplay;
+  if (updates.isShared !== undefined) updateData.is_shared = updates.isShared;
+  if (updates.shareMode !== undefined) updateData.share_mode = updates.shareMode;
+  if (updates.shares !== undefined) updateData.shares = updates.shares;
+  if (updates.status !== undefined) updateData.share_status = updates.status;
+  if (updates.allowSelfJoin !== undefined) updateData.allow_self_join = updates.allowSelfJoin;
+  if (updates.allowClaimUnits !== undefined) updateData.allow_claim_units = updates.allowClaimUnits;
 
   const updateItemClient = ensureSupabase();
   const { data, error } = await updateItemClient
@@ -931,6 +987,12 @@ export async function updateRoundItem(
     note: data.note,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
+    isShared: data.is_shared ?? undefined,
+    shareMode: data.share_mode ?? undefined,
+    shares: data.shares ?? undefined,
+    status: data.share_status ?? undefined,
+    allowSelfJoin: data.allow_self_join ?? undefined,
+    allowClaimUnits: data.allow_claim_units ?? undefined,
   } as RoundItem;
 }
 
@@ -1743,12 +1805,37 @@ export async function getUserBill(groupId: string, userId: string): Promise<User
   const user = await getUser(userId);
   if (!user) throw new Error('用户不存在');
 
+  const locale = getDefaultLocale();
+  const sharedSuffix = translate(locale, 'bill.sharedSuffix');
+
   const rounds = await getRounds(groupId);
   const allItems = await Promise.all(rounds.map(r => getRoundItems(r.id)));
-  const userItems = allItems.flat().filter(item => item.userId === userId);
+  const groupItems = allItems.flat().filter(item => !item.deleted);
 
   const roundBills = rounds.map(round => {
-    const items = userItems.filter(item => item.roundId === round.id);
+    const itemsInRound = groupItems.filter(item => item.roundId === round.id);
+    const normalItems = itemsInRound.filter(item => !item.isShared && item.userId === userId);
+    const sharedItems = itemsInRound.filter(item => item.isShared && (item.shares || []).some(s => s.userId === userId));
+
+    const sharedVirtualItems: RoundItem[] = sharedItems
+      .map((it) => {
+        const amountYen = getUserOwedYenForRoundItem(it, userId);
+        if (!amountYen) return null;
+        return {
+          id: `${it.id}_share_${userId}`,
+          groupId: it.groupId,
+          roundId: it.roundId,
+          userId,
+          nameDisplay: `${it.nameDisplay}${sharedSuffix}`,
+          price: amountYen,
+          qty: 1,
+          note: it.note,
+          createdAt: it.createdAt,
+        } as RoundItem;
+      })
+      .filter(Boolean) as RoundItem[];
+
+    const items = [...normalItems, ...sharedVirtualItems];
     return {
       roundId: round.id,
       items,
@@ -1806,4 +1893,3 @@ export async function getGroupBill(groupId: string): Promise<GroupBill> {
     memberBills,
   };
 }
-

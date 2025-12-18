@@ -5,6 +5,7 @@
 import React, { useState } from 'react';
 import { X, Download, Clock } from 'lucide-react';
 import { UserRestaurantMenuLink, RestaurantMenu, RestaurantMenuItem } from '@/types';
+import { useI18n } from '@/i18n';
 
 interface ImportRestaurantMenuModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export const ImportRestaurantMenuModal: React.FC<ImportRestaurantMenuModalProps>
   onImport,
   onSkip
 }) => {
+  const { locale, t } = useI18n();
   const [importing, setImporting] = useState<string | null>(null);
 
   if (!isOpen || menus.length === 0) return null;
@@ -34,16 +36,15 @@ export const ImportRestaurantMenuModal: React.FC<ImportRestaurantMenuModalProps>
     setImporting(restaurantMenuId);
     try {
       const result = await onImport(restaurantMenuId);
-      
-      let message = `成功导入 ${result.imported} 条菜品`;
-      if (result.conflicts.length > 0) {
-        message += `\n有 ${result.conflicts.length} 条菜品未导入（因为本桌已有不同价格的同名菜）`;
-      }
-      alert(message);
+      alert(
+        result.conflicts.length > 0
+          ? t('importMenu.resultWithConflicts', { imported: result.imported, conflicts: result.conflicts.length })
+          : t('importMenu.resultNoConflicts', { imported: result.imported })
+      );
       
       onSkip(); // 导入成功后关闭弹窗
     } catch (error) {
-      alert('导入失败：' + (error as Error).message);
+      alert(t('importMenu.failed', { message: (error as Error).message }));
     } finally {
       setImporting(null);
     }
@@ -51,7 +52,7 @@ export const ImportRestaurantMenuModal: React.FC<ImportRestaurantMenuModalProps>
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('zh-CN', {
+    return date.toLocaleDateString(locale === 'ja' ? 'ja-JP' : 'zh-CN', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
@@ -64,7 +65,7 @@ export const ImportRestaurantMenuModal: React.FC<ImportRestaurantMenuModalProps>
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold text-gray-800">
-              是否从常用店菜单导入菜品？
+              {t('importMenu.title')}
             </h3>
             <button
               onClick={onSkip}
@@ -84,7 +85,7 @@ export const ImportRestaurantMenuModal: React.FC<ImportRestaurantMenuModalProps>
                   <div>
                     <h4 className="font-medium text-gray-900">{link.displayName}</h4>
                     <p className="text-xs text-gray-500 mt-1">
-                      {items.length} 道菜品
+                      {t('importMenu.itemsCount', { n: items.length })}
                     </p>
                   </div>
                   <div className="text-xs text-gray-400 flex items-center space-x-1">
@@ -99,7 +100,7 @@ export const ImportRestaurantMenuModal: React.FC<ImportRestaurantMenuModalProps>
                 >
                   <Download size={16} />
                   <span>
-                    {importing === link.restaurantMenuId ? '导入中...' : '导入这个菜单'}
+                    {importing === link.restaurantMenuId ? t('importMenu.importing') : t('importMenu.importThis')}
                   </span>
                 </button>
               </div>
@@ -110,11 +111,10 @@ export const ImportRestaurantMenuModal: React.FC<ImportRestaurantMenuModalProps>
             onClick={onSkip}
             className="w-full py-2.5 px-4 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
           >
-            跳过这次
+            {t('importMenu.skip')}
           </button>
         </div>
       </div>
     </div>
   );
 };
-
