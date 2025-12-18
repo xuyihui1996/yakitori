@@ -68,7 +68,8 @@ export function generateRoundExportText(
     .filter(item => !item.deleted)
     .reduce((sum, item) => sum + item.price * item.qty, 0);
 
-  const roundNum = getRoundDisplayId(round.id).replace('R', '');
+  const roundDisplay = getRoundDisplayId(round.id);
+  const roundNum = roundDisplay.match(/\d+/)?.[0] ?? roundDisplay;
   let text = `【${t('export.round', { n: roundNum })}】\n`;
   
   aggregated.forEach((item) => {
@@ -166,7 +167,8 @@ export function generateUserBillText(
     );
     
     if (roundItems.length > 0) {
-      const roundNum = getRoundDisplayId(round.id).replace('R', '');
+      const roundDisplay = getRoundDisplayId(round.id);
+      const roundNum = roundDisplay.match(/\d+/)?.[0] ?? roundDisplay;
       text += `【${t('export.round', { n: roundNum })}】\n`;
       
       roundItems.forEach((item) => {
