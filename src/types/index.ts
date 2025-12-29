@@ -44,6 +44,7 @@ export interface Round {
   createdBy: string;
   createdAt: string;
   closedAt?: string;
+   memberConfirmations?: Record<string, boolean>;
 }
 
 // 某一轮里的具体点单记录

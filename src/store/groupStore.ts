@@ -37,6 +37,14 @@ interface GroupState {
   // 加载状态
   loading: boolean;
   error: string | null;
+  actionLoading: Partial<Record<
+    'createNewRound' |
+    'closeCurrentRound' |
+    'startCheckoutConfirmation' |
+    'finalizeCheckout' |
+    'confirmRound',
+    boolean
+  >>;
 
   // Actions
   setCurrentUser: (user: User) => void;
@@ -57,6 +65,8 @@ interface GroupState {
   // 轮次操作
   createNewRound: () => Promise<void>;
   closeCurrentRound: () => Promise<void>;
+  confirmCurrentRound: () => Promise<void>;
+  clearCurrentRoundConfirmationIfNeeded: () => Promise<void>;
 
   // 订单操作
   addOrderItem: (item: Omit<RoundItem, 'id' | 'createdAt' | 'groupId' | 'roundId' | 'userId'>) => Promise<void>;
@@ -120,6 +130,7 @@ export const useGroupStore = create<GroupState>((set, get) => ({
   allRoundItems: [],
   loading: false,
   error: null,
+  actionLoading: {},
 
   setCurrentUser: (user) => {
     set({ currentUser: user });
@@ -389,7 +400,9 @@ export const useGroupStore = create<GroupState>((set, get) => ({
   createNewRound: async () => {
     const { currentGroup, currentUser } = get();
     if (!currentGroup || !currentUser) return;
+    if (get().actionLoading.createNewRound) return;
 
+    set({ actionLoading: { ...get().actionLoading, createNewRound: true } });
     try {
       const newRound = await api.createRound(currentGroup.id, currentUser.id);
       await get().loadRounds();
@@ -397,13 +410,17 @@ export const useGroupStore = create<GroupState>((set, get) => ({
     } catch (error) {
       set({ error: (error as Error).message });
       throw error;
+    } finally {
+      set({ actionLoading: { ...get().actionLoading, createNewRound: false } });
     }
   },
 
   closeCurrentRound: async () => {
     const { currentRound, currentUser } = get();
     if (!currentRound || !currentUser) return;
+    if (get().actionLoading.closeCurrentRound) return;
 
+    set({ actionLoading: { ...get().actionLoading, closeCurrentRound: true } });
     try {
       // 关轮前：自动锁定本轮所有未锁定的共享条目
       const roundId = currentRound.id;
@@ -424,6 +441,8 @@ export const useGroupStore = create<GroupState>((set, get) => ({
     } catch (error) {
       set({ error: (error as Error).message });
       throw error;
+    } finally {
+      set({ actionLoading: { ...get().actionLoading, closeCurrentRound: false } });
     }
   },
 
@@ -446,6 +465,7 @@ export const useGroupStore = create<GroupState>((set, get) => ({
 
     set({ roundItems: [...get().roundItems, newItem] });
     await get().loadAllRoundItems();
+    await get().clearCurrentRoundConfirmationIfNeeded();
     return newItem;
   },
 
@@ -465,6 +485,7 @@ export const useGroupStore = create<GroupState>((set, get) => ({
   updateOrderItem: async (itemId: string, qty: number) => {
     try {
       await get().updateRoundItem(itemId, { qty });
+      await get().clearCurrentRoundConfirmationIfNeeded();
     } catch (error) {
       console.error('Failed to update order item:', error);
       throw error;
@@ -481,6 +502,7 @@ export const useGroupStore = create<GroupState>((set, get) => ({
         await get().loadRoundItems(get().currentRound!.id);
       }
       await get().loadAllRoundItems();
+      await get().clearCurrentRoundConfirmationIfNeeded();
     } catch (error) {
       console.error('Failed to delete order item:', error);
       throw error;
@@ -564,6 +586,7 @@ export const useGroupStore = create<GroupState>((set, get) => ({
       nextShares.length === 0 ? 'pending' : (item.status === 'pending' || !item.status ? 'active' : item.status);
 
     await get().updateRoundItem(itemId, { shares: nextShares, status: nextStatus });
+    await get().clearCurrentRoundConfirmationIfNeeded();
   },
 
   addParticipantsToSharedItem: async (itemId, userIds) => {
@@ -670,13 +693,17 @@ export const useGroupStore = create<GroupState>((set, get) => ({
   startCheckoutConfirmation: async () => {
     const { currentGroup, currentUser } = get();
     if (!currentGroup || !currentUser) return;
+    if (get().actionLoading.startCheckoutConfirmation) return;
 
+    set({ actionLoading: { ...get().actionLoading, startCheckoutConfirmation: true } });
     try {
       await api.startCheckoutConfirmation(currentGroup.id, currentUser.id);
       await get().loadGroup(currentGroup.id);
     } catch (error) {
       set({ error: (error as Error).message });
       throw error;
+    } finally {
+      set({ actionLoading: { ...get().actionLoading, startCheckoutConfirmation: false } });
     }
   },
 
@@ -696,7 +723,9 @@ export const useGroupStore = create<GroupState>((set, get) => ({
   finalizeCheckout: async () => {
     const { currentGroup, currentUser } = get();
     if (!currentGroup || !currentUser) return;
+    if (get().actionLoading.finalizeCheckout) return;
 
+    set({ actionLoading: { ...get().actionLoading, finalizeCheckout: true } });
     try {
       // 结账前：自动锁定所有未锁定共享条目（避免账单仍记在创建者名下/试算不稳定）
       const sharedToLock = get().allRoundItems.filter((it) => it.isShared && !it.deleted && it.status !== 'locked');
@@ -713,6 +742,77 @@ export const useGroupStore = create<GroupState>((set, get) => ({
     } catch (error) {
       set({ error: (error as Error).message });
       throw error;
+    } finally {
+      set({ actionLoading: { ...get().actionLoading, finalizeCheckout: false } });
+    }
+  },
+
+  confirmCurrentRound: async () => {
+    const { currentGroup, currentRound, currentUser } = get();
+    if (!currentGroup || !currentRound || !currentUser) return;
+    if (get().actionLoading.confirmRound) return;
+
+    set({ actionLoading: { ...get().actionLoading, confirmRound: true } });
+    try {
+      const { allConfirmed } = await api.confirmRoundSubmission(
+        currentGroup.id,
+        currentRound.id,
+        currentUser.id
+      );
+      await get().loadGroup(currentGroup.id);
+
+      if (allConfirmed) {
+        // 锁定本轮共享条目
+        const sharedToLock = get().allRoundItems.filter(
+          (it) =>
+            it.roundId === currentRound.id &&
+            !it.deleted &&
+            it.isShared &&
+            it.status !== 'locked'
+        );
+        for (const it of sharedToLock) {
+          try {
+            await get().lockRoundItem(it.id, { force: true });
+          } catch (e) {
+            console.warn('Failed to auto-lock shared item before auto close:', it.id, e);
+          }
+        }
+
+        // 自动关轮（允许成员触发）
+        await api.closeRound(currentRound.id, currentUser.id, { allowMember: true });
+        await get().loadRounds();
+        await get().loadAllRoundItems();
+
+        // 自动开启下一轮（允许成员触发）
+        await api.createRound(currentGroup.id, currentUser.id, { allowMember: true });
+        await get().loadRounds();
+        await get().loadAllRoundItems();
+        await get().loadGroup(currentGroup.id);
+      }
+    } catch (error) {
+      set({ error: (error as Error).message });
+      throw error;
+    } finally {
+      set({ actionLoading: { ...get().actionLoading, confirmRound: false } });
+    }
+  },
+
+  clearCurrentRoundConfirmationIfNeeded: async () => {
+    const { currentGroup, currentRound, currentUser } = get();
+    if (!currentGroup || !currentRound || !currentUser) return;
+
+    const confirmations = currentRound.memberConfirmations || {};
+    if (!confirmations[currentUser.id]) return;
+
+    const members = currentGroup.members || [];
+    const allConfirmed = members.length > 0 && members.every((m) => confirmations[m]);
+    if (allConfirmed) return;
+
+    try {
+      await api.setRoundConfirmation(currentGroup.id, currentRound.id, currentUser.id, false);
+      await get().loadRounds();
+    } catch (error) {
+      console.warn('Failed to clear round confirmation:', error);
     }
   },
 
@@ -818,7 +918,8 @@ export const useGroupStore = create<GroupState>((set, get) => ({
       roundItems: [],
       allRoundItems: [],
       loading: false,
-      error: null
+      error: null,
+      actionLoading: {}
     });
   }
 }));

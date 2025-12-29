@@ -42,8 +42,14 @@ CREATE TABLE IF NOT EXISTS rounds (
   status TEXT DEFAULT 'open',
   created_by TEXT NOT NULL REFERENCES users(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  closed_at TIMESTAMPTZ
+  closed_at TIMESTAMPTZ,
+  member_confirmations JSONB DEFAULT '{}'::jsonb
 );
+
+-- 轮次并发保护：同一 group 同一时间最多一个 open 的正常轮次（排除 _Extra）
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_rounds_one_open_per_group
+ON rounds (group_id)
+WHERE status = 'open' AND id NOT LIKE '%_Extra';
 
 -- 5. 订单项表
 CREATE TABLE IF NOT EXISTS round_items (

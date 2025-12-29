@@ -17,8 +17,7 @@ export const LanguageToggle: React.FC<{ className?: string }> = ({ className }) 
       type="button"
     >
       <Languages size={18} />
-      <span>{locale === 'zh' ? t('lang.ja') : t('lang.zh')}</span>
+      <span className="whitespace-nowrap">{locale === 'zh' ? t('lang.ja') : t('lang.zh')}</span>
     </button>
   );
 };
-

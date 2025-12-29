@@ -339,6 +339,7 @@ export async function getGroup(groupId: string): Promise<{
     createdBy: roundData.created_by,
     createdAt: roundData.created_at,
     closedAt: roundData.closed_at,
+    memberConfirmations: roundData.member_confirmations || {},
   } as Round : undefined;
 
   return {
@@ -638,13 +639,18 @@ export async function getRounds(groupId: string): Promise<Round[]> {
     createdBy: round.created_by,
     createdAt: round.created_at,
     closedAt: round.closed_at,
+    memberConfirmations: round.member_confirmations || {},
   })) as Round[];
 }
 
 /**
  * 创建新轮次
  */
-export async function createRound(groupId: string, createdBy: string): Promise<Round> {
+export async function createRound(
+  groupId: string,
+  createdBy: string,
+  options?: { allowMember?: boolean }
+): Promise<Round> {
   // 检查权限
   const checkOwnerClient = ensureSupabase();
   const { data: groupData } = await checkOwnerClient
@@ -653,20 +659,36 @@ export async function createRound(groupId: string, createdBy: string): Promise<R
     .eq('id', groupId)
     .single();
 
-  if (!groupData || groupData.owner_id !== createdBy) {
+  if (!groupData || (!options?.allowMember && groupData.owner_id !== createdBy)) {
     throw new Error('只有管理员可以开启新轮次');
   }
+  if (options?.allowMember && !((groupData as any).members || []).includes(createdBy)) {
+    throw new Error('只有本桌成员可以开启新轮次');
+  }
 
-  // 检查是否有未关闭的轮次
+  // 幂等：如果已经存在 open 的“正常轮次”，直接返回它（避免慢网/重复点击导致并发创建）
   const checkRoundsClient = ensureSupabase();
-  const { data: openRounds } = await checkRoundsClient
+  const { data: openRounds, error: openRoundsError } = await checkRoundsClient
     .from('rounds')
-    .select('id')
+    .select('*')
     .eq('group_id', groupId)
     .eq('status', 'open');
 
-  if (openRounds && openRounds.length > 0) {
-    throw new Error('请先关闭当前轮次');
+  if (openRoundsError) {
+    console.error('Failed to check open rounds:', openRoundsError);
+    throw new Error('检查轮次状态失败');
+  }
+
+  const openNormalRound = (openRounds || []).find((r: any) => /_R(\d+)$/.test(r.id));
+  if (openNormalRound) {
+    return {
+      id: openNormalRound.id,
+      groupId: openNormalRound.group_id,
+      status: openNormalRound.status,
+      createdBy: openNormalRound.created_by,
+      createdAt: openNormalRound.created_at,
+      closedAt: openNormalRound.closed_at,
+    } as Round;
   }
 
   // 计算下一个轮次编号（使用唯一ID格式：{groupId}_R{num}）
@@ -696,6 +718,25 @@ export async function createRound(groupId: string, createdBy: string): Promise<R
   const nextRoundNum = maxRoundNum + 1;
   const roundId = `${groupId}_R${nextRoundNum}`;
 
+  // 二次确认：在写入前再查一次 open 轮次，避免并发窗口内出现“双开”
+  const recheckClient = ensureSupabase();
+  const { data: recheckOpenRounds } = await recheckClient
+    .from('rounds')
+    .select('*')
+    .eq('group_id', groupId)
+    .eq('status', 'open');
+  const recheckOpenNormal = (recheckOpenRounds || []).find((r: any) => /_R(\d+)$/.test(r.id));
+  if (recheckOpenNormal) {
+    return {
+      id: recheckOpenNormal.id,
+      groupId: recheckOpenNormal.group_id,
+      status: recheckOpenNormal.status,
+      createdBy: recheckOpenNormal.created_by,
+      createdAt: recheckOpenNormal.created_at,
+      closedAt: recheckOpenNormal.closed_at,
+    } as Round;
+  }
+
   const newRound = {
     id: roundId,
     group_id: groupId,
@@ -712,6 +753,26 @@ export async function createRound(groupId: string, createdBy: string): Promise<R
     .single();
 
   if (roundError) {
+    // 并发情况下：如果数据库已存在 open 轮次（唯一约束触发），回退为读取并返回现有 open 轮次
+    if (roundError.code === '23505') {
+      const fallbackClient = ensureSupabase();
+      const { data: fallbackOpenRounds } = await fallbackClient
+        .from('rounds')
+        .select('*')
+        .eq('group_id', groupId)
+        .eq('status', 'open');
+      const fallbackOpenNormal = (fallbackOpenRounds || []).find((r: any) => /_R(\d+)$/.test(r.id));
+      if (fallbackOpenNormal) {
+        return {
+          id: fallbackOpenNormal.id,
+          groupId: fallbackOpenNormal.group_id,
+          status: fallbackOpenNormal.status,
+          createdBy: fallbackOpenNormal.created_by,
+          createdAt: fallbackOpenNormal.created_at,
+          closedAt: fallbackOpenNormal.closed_at,
+        } as Round;
+      }
+    }
     console.error('Failed to create round:', roundError);
     throw new Error('创建轮次失败: ' + roundError.message);
   }
@@ -728,7 +789,11 @@ export async function createRound(groupId: string, createdBy: string): Promise<R
 /**
  * 关闭轮次
  */
-export async function closeRound(roundId: string, userId: string): Promise<Round> {
+export async function closeRound(
+  roundId: string,
+  userId: string,
+  options?: { allowMember?: boolean }
+): Promise<Round> {
   // 检查权限
   const roundClient = ensureSupabase();
   const { data: roundData } = await roundClient
@@ -744,12 +809,21 @@ export async function closeRound(roundId: string, userId: string): Promise<Round
   const groupClient = ensureSupabase();
   const { data: groupData } = await groupClient
     .from('groups')
-    .select('owner_id')
+    .select('owner_id, members')
     .eq('id', roundData.group_id)
     .single();
 
-  if (!groupData || groupData.owner_id !== userId) {
+  if (!groupData) {
+    throw new Error('组不存在');
+  }
+  if (!options?.allowMember && groupData.owner_id !== userId) {
     throw new Error('只有管理员可以关闭轮次');
+  }
+  if (options?.allowMember) {
+    const members = (groupData as any).members || [];
+    if (!members.includes(userId)) {
+      throw new Error('仅限本桌成员操作');
+    }
   }
 
   const updateRoundClient = ensureSupabase();
@@ -776,6 +850,76 @@ export async function closeRound(roundId: string, userId: string): Promise<Round
     createdAt: data.created_at,
     closedAt: data.closed_at,
   } as Round;
+}
+
+/**
+ * 成员确认本轮点单，全部确认后自动关轮
+ */
+export async function confirmRoundSubmission(
+  groupId: string,
+  roundId: string,
+  userId: string
+): Promise<{ allConfirmed: boolean }> {
+  return setRoundConfirmation(groupId, roundId, userId, true);
+}
+
+/**
+ * 设置本轮确认状态
+ */
+export async function setRoundConfirmation(
+  groupId: string,
+  roundId: string,
+  userId: string,
+  confirmed: boolean
+): Promise<{ allConfirmed: boolean }> {
+  const client = ensureSupabase();
+
+  const { data: groupData, error: groupError } = await client
+    .from('groups')
+    .select('members, settled')
+    .eq('id', groupId)
+    .single();
+
+  if (groupError || !groupData) {
+    throw new Error('组不存在');
+  }
+  if (groupData.settled) {
+    throw new Error('该桌已结账');
+  }
+  const members: string[] = (groupData.members as string[]) || [];
+  if (!members.includes(userId)) {
+    throw new Error('仅限本桌成员操作');
+  }
+
+  const { data: roundData, error: roundError } = await client
+    .from('rounds')
+    .select('member_confirmations, status')
+    .eq('id', roundId)
+    .single();
+
+  if (roundError || !roundData) {
+    throw new Error('轮次不存在');
+  }
+  if (roundData.status !== 'open') {
+    throw new Error('当前轮已结束');
+  }
+
+  const confirmations = { ...(roundData.member_confirmations || {}) } as Record<string, boolean>;
+  confirmations[userId] = confirmed;
+  const allConfirmed = members.every((m) => confirmations[m]);
+
+  const { error: updateError } = await client
+    .from('rounds')
+    .update({
+      member_confirmations: confirmations
+    })
+    .eq('id', roundId);
+
+  if (updateError) {
+    throw new Error('确认失败: ' + updateError.message);
+  }
+
+  return { allConfirmed };
 }
 
 // ============ 订单相关 ============
@@ -1136,12 +1280,17 @@ export async function startCheckoutConfirmation(groupId: string, userId: string)
   const checkOwnerClient = ensureSupabase();
   const { data: groupData } = await checkOwnerClient
     .from('groups')
-    .select('owner_id, members')
+    .select('owner_id, members, checkout_confirming')
     .eq('id', groupId)
     .single();
 
   if (!groupData || groupData.owner_id !== userId) {
     throw new Error('只有管理员可以结账');
+  }
+
+  // 幂等：已在确认流程中则直接返回（避免重复点击触发多次状态写入）
+  if (groupData.checkout_confirming) {
+    return;
   }
 
   // 初始化成员确认状态（所有成员都未确认）

@@ -366,7 +366,11 @@ export async function getRounds(groupId: string): Promise<Round[]> {
 /**
  * 创建新轮次
  */
-export async function createRound(groupId: string, createdBy: string): Promise<Round> {
+export async function createRound(
+  groupId: string,
+  createdBy: string,
+  options?: { allowMember?: boolean }
+): Promise<Round> {
   await delay();
   
   const group = groups.find(g => g.id === groupId);
@@ -374,8 +378,11 @@ export async function createRound(groupId: string, createdBy: string): Promise<R
     throw new Error('组不存在');
   }
 
-  if (group.ownerId !== createdBy) {
+  if (!options?.allowMember && group.ownerId !== createdBy) {
     throw new Error('只有管理员可以开启新轮次');
+  }
+  if (options?.allowMember && !group.members.includes(createdBy)) {
+    throw new Error('只有本桌成员可以开启新轮次');
   }
 
   // 检查是否有未关闭的轮次
@@ -402,7 +409,11 @@ export async function createRound(groupId: string, createdBy: string): Promise<R
 /**
  * 关闭轮次
  */
-export async function closeRound(roundId: string, userId: string): Promise<Round> {
+export async function closeRound(
+  roundId: string,
+  userId: string,
+  options?: { allowMember?: boolean }
+): Promise<Round> {
   await delay();
   
   const round = rounds.find(r => r.id === roundId);
@@ -411,8 +422,14 @@ export async function closeRound(roundId: string, userId: string): Promise<Round
   }
 
   const group = groups.find(g => g.id === round.groupId);
-  if (!group || group.ownerId !== userId) {
+  if (!group) {
+    throw new Error('组不存在');
+  }
+  if (!options?.allowMember && group.ownerId !== userId) {
     throw new Error('只有管理员可以关闭轮次');
+  }
+  if (options?.allowMember && !group.members.includes(userId)) {
+    throw new Error('仅限本桌成员操作');
   }
 
   round.status = 'closed';
@@ -770,6 +787,50 @@ export async function finalizeCheckout(groupId: string, userId: string): Promise
   // 标记组为已结账
   group.settled = true;
   group.checkoutConfirming = false;
+}
+
+// 设置本轮确认状态（Mock 简化）
+export async function setRoundConfirmation(
+  groupId: string,
+  roundId: string,
+  userId: string,
+  confirmed: boolean
+): Promise<{ allConfirmed: boolean }> {
+  await delay();
+  const group = groups.find(g => g.id === groupId);
+  if (!group) {
+    throw new Error('组不存在');
+  }
+  if (!group.members.includes(userId)) {
+    throw new Error('仅限本桌成员操作');
+  }
+  if (group.settled) {
+    throw new Error('该桌已结账');
+  }
+
+  const round = rounds.find(r => r.id === roundId);
+  if (!round) {
+    throw new Error('轮次不存在');
+  }
+  if (round.status !== 'open') {
+    throw new Error('当前轮已结束');
+  }
+
+  const confirmations = (round.memberConfirmations || {}) as Record<string, boolean>;
+  confirmations[userId] = confirmed;
+  round.memberConfirmations = confirmations;
+
+  const allConfirmed = group.members.every(memberId => confirmations[memberId] === true);
+  return { allConfirmed };
+}
+
+// 成员确认本轮点单
+export async function confirmRoundSubmission(
+  groupId: string,
+  roundId: string,
+  userId: string
+): Promise<{ allConfirmed: boolean }> {
+  return setRoundConfirmation(groupId, roundId, userId, true);
 }
 
 // ============ 成员管理 ============

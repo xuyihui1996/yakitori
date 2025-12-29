@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Users, Receipt, PlayCircle, CheckCircle, BarChart3, X, UtensilsCrossed } from 'lucide-react';
 import { useGroupStore } from '@/store/groupStore';
 import { ItemInput } from '@/components/ItemInput';
-import { MenuPicker } from '@/components/MenuPicker';
+import { MerchantMenu } from '@/components/MerchantMenu';
 import { RoundTabs } from '@/components/RoundTabs';
 import { OwnerSummary } from '@/components/OwnerSummary';
 import { CheckoutConfirmModal } from '@/components/CheckoutConfirmModal';
@@ -16,12 +16,12 @@ import { SaveRestaurantMenuModal } from '@/components/SaveRestaurantMenuModal';
 import { ImportRestaurantMenuModal } from '@/components/ImportRestaurantMenuModal';
 import { SharedJoinBanner } from '@/components/SharedJoinBanner';
 import { SharedItemCreator } from '@/components/SharedItemCreator';
-import { GroupMenuItem } from '@/types';
 import { getRoundDisplayId } from '@/utils/format';
 import * as api from '@/api/supabaseService';
 import { useI18n } from '@/i18n';
 import { LanguageToggle } from '@/components/LanguageToggle';
-import { calculateTotal } from '@/utils/money';
+import { calculateTotal, formatMoney } from '@/utils/money';
+import { merchantMenu } from '@/data/merchantMenu';
 
 export const GroupHome: React.FC = () => {
   const navigate = useNavigate();
@@ -30,15 +30,14 @@ export const GroupHome: React.FC = () => {
     currentUser,
     currentGroup,
     members,
-    menu,
     rounds,
     currentRound,
     allRoundItems,
+    actionLoading,
     loadGroup,
     loadMenu,
     addMenuItem,
     updateMenuItemPrice,
-    updateMenuItemName,
     addOrderItem,
     addRoundItem,
     deleteOrderItem,
@@ -49,16 +48,15 @@ export const GroupHome: React.FC = () => {
     removeParticipantFromSharedItem,
     lockRoundItem,
     createNewRound,
-    closeCurrentRound,
     startCheckoutConfirmation,
     confirmMemberOrder,
     finalizeCheckout,
     removeMember,
-    loadRounds,
     loadAllRoundItems,
     saveGroupAsRestaurantMenu,
     getUserRestaurantMenus,
-    importRestaurantMenuToGroup
+    importRestaurantMenuToGroup,
+    confirmCurrentRound
   } = useGroupStore();
 
   const [showItemInput, setShowItemInput] = useState(false);
@@ -67,6 +65,7 @@ export const GroupHome: React.FC = () => {
   const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
   const [showSaveMenuModal, setShowSaveMenuModal] = useState(false);
   const [showImportMenuModal, setShowImportMenuModal] = useState(false);
+  const [showRoundConfirmModal, setShowRoundConfirmModal] = useState(false);
   const [restaurantMenus, setRestaurantMenus] = useState<Array<{
     link: import('@/types').UserRestaurantMenuLink;
     menu: import('@/types').RestaurantMenu;
@@ -158,6 +157,14 @@ export const GroupHome: React.FC = () => {
   }, [currentGroup?.id, currentUser?.id, currentGroup?.ownerId, currentGroup?.settled, getUserRestaurantMenus]);
 
   const isOwner = currentUser?.id === currentGroup?.ownerId;
+  const isCreatingRound = !!actionLoading.createNewRound;
+  const isStartingCheckout = !!actionLoading.startCheckoutConfirmation;
+  const isFinalizingCheckout = !!actionLoading.finalizeCheckout;
+  const isClosingRound = !!actionLoading.closeCurrentRound;
+  const isConfirmingRound = !!actionLoading.confirmRound;
+
+  const startNewRoundGuardRef = React.useRef(false);
+  const startCheckoutGuardRef = React.useRef(false);
 
   const ownerHintKey = currentGroup ? `owner_summary_hint_${currentGroup.id}` : '';
   const [showOwnerHint, setShowOwnerHint] = useState(() => {
@@ -176,6 +183,41 @@ export const GroupHome: React.FC = () => {
     currentRound && currentGroup && !currentGroup.settled
       ? allRoundItems.filter((it) => it.roundId === currentRound.id && !it.deleted && it.isShared)
       : [];
+
+  const roundConfirmations = currentRound?.memberConfirmations || {};
+  const confirmedCount = members.filter((m) => roundConfirmations[m.id]).length;
+  const totalMembers = members.length;
+  const allConfirmed = totalMembers > 0 && confirmedCount === totalMembers;
+  const confirmedMembers = members.filter((m) => roundConfirmations[m.id]);
+  const pendingMembers = members.filter((m) => !roundConfirmations[m.id]);
+
+  const currentUserRoundItems = React.useMemo(() => {
+    if (!currentRound || !currentUser) return [];
+    return allRoundItems.filter(
+      (it) =>
+        it.roundId === currentRound.id &&
+        it.userId === currentUser.id &&
+        !it.deleted
+    );
+  }, [allRoundItems, currentRound, currentUser]);
+
+  const currentUserRoundSummary = React.useMemo(() => {
+    const map = new Map<string, { nameDisplay: string; price: number; qty: number }>();
+    currentUserRoundItems.forEach((it) => {
+      const key = `${it.nameDisplay}:${it.price}`;
+      const existing = map.get(key);
+      if (existing) {
+        existing.qty += it.qty;
+      } else {
+        map.set(key, { nameDisplay: it.nameDisplay, price: it.price, qty: it.qty });
+      }
+    });
+    return Array.from(map.values());
+  }, [currentUserRoundItems]);
+
+  const currentUserRoundTotal = React.useMemo(() => {
+    return currentUserRoundSummary.reduce((sum, it) => sum + it.price * it.qty, 0);
+  }, [currentUserRoundSummary]);
 
   // 处理添加菜品
   const handleAddMenuItem = async (item: {
@@ -270,53 +312,16 @@ export const GroupHome: React.FC = () => {
     setShowItemInput(false);
   };
 
-  // 从菜单选择并添加到订单
-  const handleSelectFromMenu = async (menuItem: GroupMenuItem, qty: number) => {
-    if (!currentRound) {
-      // 不显示 alert，直接返回（因为 disabled 状态已经提示了）
-      return;
-    }
-
-    // 检查轮次状态
-    if (currentRound.status !== 'open') {
-      // 轮次已关闭，不显示 alert（避免重复提示），直接返回
-      return;
-    }
-
-    try {
-      await addOrderItem({
-        nameDisplay: menuItem.nameDisplay,
-        price: menuItem.price,
-        qty,
-        note: menuItem.note
-      });
-    } catch (error) {
-      // 错误已经在 API 层处理，这里不再重复显示 alert
-      // 避免在 handleConfirmChanges 的循环中重复弹出
-      throw error; // 重新抛出，让调用方决定是否显示错误
-    }
-  };
-
-  // 处理轮次操作
-  const handleCloseRound = async () => {
-    if (!window.confirm(t('home.closeRoundConfirm'))) {
-      return;
-    }
-
-    try {
-      await closeCurrentRound();
-      alert(t('home.closeRoundDone'));
-    } catch (error) {
-      alert((error as Error).message);
-    }
-  };
-
   const handleStartNewRound = async () => {
+    if (startNewRoundGuardRef.current) return;
+    startNewRoundGuardRef.current = true;
     try {
       await createNewRound();
       alert(t('home.startNewRoundDone'));
     } catch (error) {
       alert((error as Error).message);
+    } finally {
+      startNewRoundGuardRef.current = false;
     }
   };
 
@@ -335,17 +340,19 @@ export const GroupHome: React.FC = () => {
 
   // Owner开始结账确认流程
   const handleStartCheckout = async () => {
+    if (startCheckoutGuardRef.current) return;
+    startCheckoutGuardRef.current = true;
     if (!window.confirm(t('home.checkoutStartConfirm'))) {
+      startCheckoutGuardRef.current = false;
       return;
     }
 
     try {
       await startCheckoutConfirmation();
-      // 重新加载数据
-      await loadRounds();
-      await loadAllRoundItems();
     } catch (error) {
       alert((error as Error).message);
+    } finally {
+      startCheckoutGuardRef.current = false;
     }
   };
 
@@ -446,8 +453,8 @@ export const GroupHome: React.FC = () => {
       {/* 顶部状态栏 */}
       <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white sticky top-0 z-20 shadow-lg">
         <div className="max-w-2xl mx-auto px-4 py-4">
-          <div className="flex justify-between items-start">
-            <div>
+          <div className="flex justify-between items-start gap-3">
+            <div className="min-w-0">
               <div className="flex items-center space-x-2">
                 <h1 className="text-2xl font-bold">{currentGroup.id}</h1>
                 {currentGroup.settled && (
@@ -478,11 +485,11 @@ export const GroupHome: React.FC = () => {
                 )}
               </div>
             </div>
-            <div className="flex space-x-2">
-              <LanguageToggle />
+            <div className="flex gap-2 items-center flex-nowrap shrink-0">
+              <LanguageToggle className="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium flex items-center gap-2 shrink-0" />
               <button
                 onClick={() => navigate('/my-bill')}
-                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors shrink-0"
                 title={t('home.myBill')}
               >
                 <Receipt size={24} />
@@ -490,7 +497,7 @@ export const GroupHome: React.FC = () => {
               {isOwner && (
                 <button
                   onClick={() => setShowOwnerView((v) => !v)}
-                  className={`px-3 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                  className={`px-3 py-2 rounded-lg transition-colors flex items-center gap-2 shrink-0 ${
                     showOwnerView ? 'bg-white/20' : 'hover:bg-white/10'
                   }`}
                   title={showOwnerView ? t('home.order') : t('home.summary')}
@@ -547,10 +554,11 @@ export const GroupHome: React.FC = () => {
               {!currentRound && !currentGroup.settled && (
                 <button
                   onClick={handleStartNewRound}
-                  className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center justify-center space-x-2"
+                  className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center justify-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                  disabled={isCreatingRound || isClosingRound || isStartingCheckout || isFinalizingCheckout}
                 >
                   <PlayCircle size={20} />
-                  <span>{t('home.startNewRound')}</span>
+                  <span>{isCreatingRound ? t('home.startNewRoundLoading') : t('home.startNewRound')}</span>
                 </button>
               )}
 
@@ -559,18 +567,20 @@ export const GroupHome: React.FC = () => {
                   {currentGroup.checkoutConfirming ? (
                     <button
                       onClick={handleFinalizeCheckout}
-                      className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center justify-center space-x-2"
+                      className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center justify-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                      disabled={isFinalizingCheckout || isStartingCheckout || isCreatingRound || isClosingRound}
                     >
                       <CheckCircle size={20} />
-                      <span>{t('home.checkoutFinalize')}</span>
+                      <span>{isFinalizingCheckout ? t('home.checkoutFinalizing') : t('home.checkoutFinalize')}</span>
                     </button>
                   ) : (
                     <button
                       onClick={handleStartCheckout}
-                      className="w-full py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium flex items-center justify-center space-x-2"
+                      className="w-full py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium flex items-center justify-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                      disabled={isStartingCheckout || isFinalizingCheckout || isCreatingRound || isClosingRound}
                     >
                       <CheckCircle size={20} />
-                      <span>{t('home.checkoutStart')}</span>
+                      <span>{isStartingCheckout ? t('home.checkoutStarting') : t('home.checkoutStart')}</span>
                     </button>
                   )}
                 </>
@@ -658,10 +668,10 @@ export const GroupHome: React.FC = () => {
               />
             </div>
 
-            {/* 添加菜品 */}
+            {/* 商家菜单式点单区 */}
             {!currentGroup.settled && currentRound && (
-              <div>
-                <div className="flex justify-between items-center mb-3">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
                   <h2 className="text-lg font-semibold text-gray-800">
                     {t('home.orderArea')}
                   </h2>
@@ -684,7 +694,7 @@ export const GroupHome: React.FC = () => {
                 </div>
 
                 {showItemInput && (
-                  <div className="mb-4">
+                  <div className="mb-2">
                     <ItemInput
                       onSubmit={handleAddMenuItem}
                       onCancel={() => setShowItemInput(false)}
@@ -692,43 +702,57 @@ export const GroupHome: React.FC = () => {
                   </div>
                 )}
 
-                {/* 菜单选择器 */}
-                <MenuPicker
-                  menu={menu}
-                  members={members}
-                  currentUserId={currentUser.id}
-                  currentRoundItems={allRoundItems.filter(
-                    item => 
-                      item.roundId === currentRound.id && 
-                      item.userId === currentUser.id && 
-                      !item.deleted
-                  )}
-                  onSelect={handleSelectFromMenu}
-                  onUpdateItemQty={async (itemId, newQty) => {
-                    await updateOrderItem(itemId, newQty);
-                  }}
-                  onDeleteItem={async (itemId) => {
-                    await deleteOrderItem(itemId);
-                  }}
+                <MerchantMenu
+                  items={merchantMenu}
                   disabled={currentGroup.settled || !currentRound}
-                  isOwner={isOwner}
-                  onToggleItemStatus={async (itemId, currentStatus) => {
-                    if (currentStatus === 'disabled') {
-                      // 启用
-                      await api.updateMenuItem(itemId, { status: 'active' });
-                    } else {
-                      // 停售
-                      await api.updateMenuItem(itemId, { status: 'disabled' });
-                    }
-                    await loadMenu();
+                  onAdd={async ({ nameDisplay, price, qty, note }) => {
+                    if (!currentRound) return;
+                    await addOrderItem({
+                      nameDisplay,
+                      price,
+                      qty,
+                      note
+                    });
                   }}
-                  onUpdateItemName={async (menuItemId, newName) => {
-                    await updateMenuItemName(menuItemId, newName);
-                  }}
-                  onCloseRound={isOwner && currentRound && !currentGroup.settled ? handleCloseRound : undefined}
-                  hasCurrentRound={!!currentRound}
-                  isSettled={currentGroup.settled}
                 />
+
+                <div className="sticky bottom-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowRoundConfirmModal(true)}
+                    disabled={
+                      currentGroup.settled ||
+                      !currentRound ||
+                      isConfirmingRound ||
+                      allConfirmed
+                    }
+                    className="w-full mt-3 bg-primary-600 text-white py-3 rounded-xl font-semibold hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed shadow-md"
+                  >
+                    {isConfirmingRound
+                      ? t('home.confirmRoundLoading')
+                      : allConfirmed
+                        ? t('home.confirmRoundDone')
+                        : t('home.confirmRound')}
+                    {!allConfirmed && (
+                      <span className="ml-2 text-sm text-white/80">
+                        {confirmedCount}/{totalMembers}
+                      </span>
+                    )}
+                  </button>
+                  <p className="text-xs text-gray-500 mt-2">
+                    {t('home.confirmRoundHint')}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {t('home.confirmRoundConfirmed', {
+                      names: confirmedMembers.length > 0 ? confirmedMembers.map((m) => m.name).join('、') : '-'
+                    })}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {t('home.confirmRoundPending', {
+                      names: pendingMembers.length > 0 ? pendingMembers.map((m) => m.name).join('、') : '-'
+                    })}
+                  </p>
+                </div>
               </div>
             )}
 
@@ -813,6 +837,62 @@ export const GroupHome: React.FC = () => {
           onDeleteExtraItem={handleDeleteExtraItem}
           disabled={currentGroup.settled}
         />
+      )}
+
+      {/* 本轮下单确认弹窗 */}
+      {showRoundConfirmModal && currentRound && currentUser && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden">
+            <div className="p-4 border-b">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {t('home.confirmRoundTitle')}
+              </h3>
+            </div>
+            <div className="p-4 space-y-3 max-h-[60vh] overflow-y-auto">
+              {currentUserRoundSummary.length === 0 ? (
+                <p className="text-sm text-gray-500">{t('home.confirmRoundEmpty')}</p>
+              ) : (
+                <div className="space-y-2">
+                  {currentUserRoundSummary.map((it) => (
+                    <div key={`${it.nameDisplay}-${it.price}`} className="flex justify-between items-center">
+                      <span className="text-gray-900">{it.nameDisplay}</span>
+                      <span className="text-gray-600">× {it.qty}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="pt-3 border-t flex justify-between items-center font-semibold">
+                <span>{t('home.confirmRoundTotal')}</span>
+                <span>{formatMoney(currentUserRoundTotal)}</span>
+              </div>
+            </div>
+            <div className="p-4 border-t flex gap-2">
+              <button
+                type="button"
+                className="flex-1 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                onClick={() => setShowRoundConfirmModal(false)}
+                disabled={isConfirmingRound}
+              >
+                {t('home.confirmRoundEdit')}
+              </button>
+              <button
+                type="button"
+                className="flex-1 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-60"
+                disabled={isConfirmingRound}
+                onClick={async () => {
+                  try {
+                    await confirmCurrentRound();
+                    setShowRoundConfirmModal(false);
+                  } catch (error) {
+                    alert((error as Error).message);
+                  }
+                }}
+              >
+                {isConfirmingRound ? t('home.confirmRoundLoading') : t('home.confirmRoundConfirm')}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* 保存为店铺菜单弹窗 */}
