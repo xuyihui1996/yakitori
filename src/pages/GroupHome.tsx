@@ -65,7 +65,7 @@ export const GroupHome: React.FC = () => {
   const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
   const [showSaveMenuModal, setShowSaveMenuModal] = useState(false);
   const [showImportMenuModal, setShowImportMenuModal] = useState(false);
-  const [showRoundConfirmModal, setShowRoundConfirmModal] = useState(false);
+  const [confirmModalRoundId, setConfirmModalRoundId] = useState<string | null>(null);
   const [restaurantMenus, setRestaurantMenus] = useState<Array<{
     link: import('@/types').UserRestaurantMenuLink;
     menu: import('@/types').RestaurantMenu;
@@ -218,6 +218,12 @@ export const GroupHome: React.FC = () => {
   const currentUserRoundTotal = React.useMemo(() => {
     return currentUserRoundSummary.reduce((sum, it) => sum + it.price * it.qty, 0);
   }, [currentUserRoundSummary]);
+
+  useEffect(() => {
+    if (confirmModalRoundId && currentRound?.id !== confirmModalRoundId) {
+      setConfirmModalRoundId(null);
+    }
+  }, [confirmModalRoundId, currentRound?.id]);
 
   // 处理添加菜品
   const handleAddMenuItem = async (item: {
@@ -719,7 +725,9 @@ export const GroupHome: React.FC = () => {
                 <div className="sticky bottom-4">
                   <button
                     type="button"
-                    onClick={() => setShowRoundConfirmModal(true)}
+                    onClick={() => {
+                      if (currentRound) setConfirmModalRoundId(currentRound.id);
+                    }}
                     disabled={
                       currentGroup.settled ||
                       !currentRound ||
@@ -840,7 +848,7 @@ export const GroupHome: React.FC = () => {
       )}
 
       {/* 本轮下单确认弹窗 */}
-      {showRoundConfirmModal && currentRound && currentUser && (
+      {confirmModalRoundId && currentRound && currentUser && confirmModalRoundId === currentRound.id && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden">
             <div className="p-4 border-b">
@@ -870,7 +878,7 @@ export const GroupHome: React.FC = () => {
               <button
                 type="button"
                 className="flex-1 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
-                onClick={() => setShowRoundConfirmModal(false)}
+                onClick={() => setConfirmModalRoundId(null)}
                 disabled={isConfirmingRound}
               >
                 {t('home.confirmRoundEdit')}
@@ -882,7 +890,7 @@ export const GroupHome: React.FC = () => {
                 onClick={async () => {
                   try {
                     await confirmCurrentRound();
-                    setShowRoundConfirmModal(false);
+                    setConfirmModalRoundId(null);
                   } catch (error) {
                     alert((error as Error).message);
                   }
