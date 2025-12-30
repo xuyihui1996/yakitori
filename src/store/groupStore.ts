@@ -779,12 +779,19 @@ export const useGroupStore = create<GroupState>((set, get) => ({
         }
 
         // 自动关轮（允许成员触发）
-        await api.closeRound(currentRound.id, currentUser.id, { allowMember: true });
-        await get().loadRounds();
-        await get().loadAllRoundItems();
+        try {
+          await api.closeRound(currentRound.id, currentUser.id, { allowMember: true });
+        } catch (e) {
+          console.warn('Failed to auto-close round:', e);
+        }
 
         // 自动开启下一轮（允许成员触发）
-        await api.createRound(currentGroup.id, currentUser.id, { allowMember: true });
+        try {
+          await api.createRound(currentGroup.id, currentUser.id, { allowMember: true });
+        } catch (e) {
+          console.warn('Failed to auto-create next round:', e);
+        }
+
         await get().loadRounds();
         await get().loadAllRoundItems();
         await get().loadGroup(currentGroup.id);
