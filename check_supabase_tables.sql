@@ -1,39 +1,45 @@
--- 检查 Supabase 表结构的 SQL
--- 请在 Supabase SQL Editor 执行，确认表结构正确
+-- Comprehensive Supabase Schema Check
+-- Run this in the Supabase SQL Editor
 
--- 1. 检查表是否存在
-SELECT table_name 
-FROM information_schema.tables 
-WHERE table_schema = 'public' 
-  AND table_name IN ('users', 'groups', 'rounds', 'round_items', 'group_menu_items')
+-- 1. Table Existence Check
+SELECT 'Tables' as check_type, table_name
+FROM information_schema.tables
+WHERE table_schema = 'public'
+AND table_name IN (
+    'users', 'groups', 'group_menu_items', 'rounds', 'round_items',
+    'restaurant_menus', 'restaurant_menu_items', 'user_restaurant_menu_links'
+)
 ORDER BY table_name;
 
--- 2. 检查 groups 表的外键
-SELECT 
-  tc.constraint_name, 
-  tc.table_name, 
-  kcu.column_name,
-  ccu.table_name AS foreign_table_name,
-  ccu.column_name AS foreign_column_name 
-FROM information_schema.table_constraints AS tc 
-JOIN information_schema.key_column_usage AS kcu
-  ON tc.constraint_name = kcu.constraint_name
-JOIN information_schema.constraint_column_usage AS ccu
-  ON ccu.constraint_name = tc.constraint_name
-WHERE tc.constraint_type = 'FOREIGN KEY' 
-  AND tc.table_name = 'groups';
+-- 2. Column Definition Check (Type & Nullability)
+SELECT table_name, column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_schema = 'public'
+AND table_name IN (
+    'users', 'groups', 'group_menu_items', 'rounds', 'round_items',
+    'restaurant_menus', 'restaurant_menu_items', 'user_restaurant_menu_links'
+)
+ORDER BY table_name, ordinal_position;
 
--- 3. 检查 rounds 表的外键
+-- 3. Foreign Key Constraints Check
 SELECT 
-  tc.constraint_name, 
-  tc.table_name, 
-  kcu.column_name,
-  ccu.table_name AS foreign_table_name,
-  ccu.column_name AS foreign_column_name 
+    tc.table_name, 
+    kcu.column_name,
+    ccu.table_name AS foreign_table_name,
+    ccu.column_name AS foreign_column_name 
 FROM information_schema.table_constraints AS tc 
 JOIN information_schema.key_column_usage AS kcu
   ON tc.constraint_name = kcu.constraint_name
 JOIN information_schema.constraint_column_usage AS ccu
   ON ccu.constraint_name = tc.constraint_name
 WHERE tc.constraint_type = 'FOREIGN KEY' 
-  AND tc.table_name = 'rounds';
+ORDER BY tc.table_name;
+
+-- 4. RLS Policy Check (Should be true for all)
+SELECT tablename, rowsecurity
+FROM pg_tables
+WHERE schemaname = 'public'
+AND tablename IN (
+    'users', 'groups', 'group_menu_items', 'rounds', 'round_items',
+    'restaurant_menus', 'restaurant_menu_items', 'user_restaurant_menu_links'
+);

@@ -56,14 +56,22 @@ export const MerchantMenu: React.FC<Props> = ({ items, onAdd, disabled }) => {
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
+    const scrollable = el.scrollHeight - el.clientHeight;
+    if (scrollable <= 8) return;
     const nearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 24;
-    if (!nearBottom) return;
+    const nearTop = el.scrollTop <= 24;
+    if (!nearBottom && !nearTop) return;
     const now = Date.now();
     if (now - lastSwitchRef.current < 500) return;
     const idx = categories.indexOf(activeCategory);
-    if (idx >= 0 && idx < categories.length - 1) {
+    if (nearBottom && idx >= 0 && idx < categories.length - 1) {
       lastSwitchRef.current = now;
       setActiveCategory(categories[idx + 1]);
+      return;
+    }
+    if (nearTop && idx > 0) {
+      lastSwitchRef.current = now;
+      setActiveCategory(categories[idx - 1]);
     }
   };
 
