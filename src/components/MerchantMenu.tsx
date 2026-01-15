@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { MerchantMenuItem } from '@/data/merchantMenu';
 import { formatMoney } from '@/utils/money';
@@ -47,7 +47,7 @@ export const MerchantMenu: React.FC<Props> = ({ items, onAdd, disabled }) => {
     // Or better: find closest to top
 
     // We add a small offset to account for padding
-    const containerTop = container.scrollTop + container.offsetTop;
+    // const containerTop = container.scrollTop + container.offsetTop; 
 
     // Find the section that covers the top of the viewport
     let currentCat = activeCategory;
@@ -122,8 +122,8 @@ export const MerchantMenu: React.FC<Props> = ({ items, onAdd, disabled }) => {
                 type="button"
                 onClick={() => handleCategoryClick(cat)}
                 className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${activeCategory === cat
-                    ? 'bg-primary-50 text-primary-700 font-bold border-l-4 border-primary-500'
-                    : 'text-gray-600 hover:bg-gray-50 border-l-4 border-transparent'
+                  ? 'bg-primary-50 text-primary-700 font-bold border-l-4 border-primary-500'
+                  : 'text-gray-600 hover:bg-gray-50 border-l-4 border-transparent'
                   }`}
               >
                 <span className="truncate block">{cat}</span>

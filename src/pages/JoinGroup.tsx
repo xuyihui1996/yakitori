@@ -10,16 +10,17 @@ import { useGroupStore } from '@/store/groupStore';
 import { generateQRCodeDataURL, generateJoinLink } from '@/utils/qrcode';
 import { useI18n } from '@/i18n';
 import { LanguageToggle } from '@/components/LanguageToggle';
+import { AlertTriangle } from 'lucide-react'; // Import AlertTriangle
 
 export const JoinGroup: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { t } = useI18n();
-  const { 
-    createGroup, 
-    joinGroup, 
-    currentUser, 
-    currentGroup, 
+  const {
+    createGroup,
+    joinGroup,
+    currentUser,
+    currentGroup,
     loadGroup
   } = useGroupStore();
 
@@ -31,6 +32,15 @@ export const JoinGroup: React.FC = () => {
   const [createdGroupId, setCreatedGroupId] = useState<string | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   const [linkCopied, setLinkCopied] = useState(false);
+  const [isInAppBrowser, setIsInAppBrowser] = useState(false);
+
+  useEffect(() => {
+    const ua = navigator.userAgent.toLowerCase();
+    // Detect WeChat (micromessenger) or LINE
+    if (ua.includes('micromessenger') || ua.includes(' line/')) {
+      setIsInAppBrowser(true);
+    }
+  }, []);
 
   // 检查URL参数（扫码打开）
   useEffect(() => {
@@ -52,15 +62,15 @@ export const JoinGroup: React.FC = () => {
     if (urlGroupId) {
       return;
     }
-    
+
     // 如果正在显示二维码弹窗，不自动跳转
     if (createdGroupId || sessionStorage.getItem('showing_qr_code') === 'true') {
       return;
     }
-    
+
     const userId = localStorage.getItem('ordered_user_id');
     const groupId = localStorage.getItem('ordered_group_id');
-    
+
     if (userId && groupId) {
       // 如果 store 中还没有数据，尝试加载
       if (!currentGroup) {
@@ -90,7 +100,7 @@ export const JoinGroup: React.FC = () => {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!name.trim()) {
       setError(t('join.needName'));
       return;
@@ -102,12 +112,12 @@ export const JoinGroup: React.FC = () => {
     try {
       // 先设置标记，防止自动跳转
       sessionStorage.setItem('showing_qr_code', 'true');
-      
+
       const { group } = await createGroup(name.trim());
-      
+
       // 设置状态，触发弹窗显示
       setCreatedGroupId(group.id);
-      
+
       // 生成二维码（异步，不阻塞）
       generateQRCodeDataURL(generateJoinLink(group.id))
         .then((qrCode) => {
@@ -117,7 +127,7 @@ export const JoinGroup: React.FC = () => {
           console.error('二维码生成失败:', qrError);
           // 不设置错误，只是不显示二维码，用户仍可以使用链接
         });
-      
+
       // 不立即跳转，显示二维码
       // navigate('/group');
     } catch (err) {
@@ -146,7 +156,7 @@ export const JoinGroup: React.FC = () => {
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!name.trim()) {
       setError(t('join.needName'));
       return;
@@ -188,26 +198,32 @@ export const JoinGroup: React.FC = () => {
 
         {/* 主卡片 */}
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+          {isInAppBrowser && (
+            <div className="bg-yellow-50 p-4 border-b border-yellow-100 flex items-start gap-3">
+              <AlertTriangle className="text-yellow-600 shrink-0 mt-0.5" size={20} />
+              <p className="text-sm text-yellow-800 font-medium">
+                {t('join.browserWarning')}
+              </p>
+            </div>
+          )}
           {/* 模式切换 */}
           <div className="flex border-b">
             <button
               onClick={() => setMode('create')}
-              className={`flex-1 py-4 font-medium transition-colors ${
-                mode === 'create'
+              className={`flex-1 py-4 font-medium transition-colors ${mode === 'create'
                   ? 'bg-primary-600 text-white'
                   : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-              }`}
+                }`}
             >
               <Plus size={20} className="inline mr-2" />
               {t('join.createTab')}
             </button>
             <button
               onClick={() => setMode('join')}
-              className={`flex-1 py-4 font-medium transition-colors ${
-                mode === 'join'
+              className={`flex-1 py-4 font-medium transition-colors ${mode === 'join'
                   ? 'bg-primary-600 text-white'
                   : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-              }`}
+                }`}
             >
               <LogIn size={20} className="inline mr-2" />
               {t('join.joinTab')}
@@ -305,7 +321,7 @@ export const JoinGroup: React.FC = () => {
 
       {/* 创建成功后的二维码弹窗 */}
       {createdGroupId && (
-        <div 
+        <div
           data-testid="qr-modal"
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
           style={{ zIndex: 9999 }}
@@ -322,7 +338,7 @@ export const JoinGroup: React.FC = () => {
             // }
           }}
         >
-          <div 
+          <div
             className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
             onClick={(e) => e.stopPropagation()}
           >
@@ -342,7 +358,7 @@ export const JoinGroup: React.FC = () => {
             <p className="text-sm text-gray-600 mb-4 text-center">
               {t('join.createdSubtitle')}
             </p>
-            
+
             {/* 二维码 - 强制渲染版本 */}
             <div className="flex justify-center mb-4">
               <div className="w-64 h-64 border-4 border-gray-200 rounded-lg bg-white relative">
@@ -359,11 +375,11 @@ export const JoinGroup: React.FC = () => {
                       }}
                     />
                     {/* 同时使用img标签 */}
-                    <img 
-                      src={qrCodeUrl} 
-                      alt="Join QR Code" 
+                    <img
+                      src={qrCodeUrl}
+                      alt="Join QR Code"
                       className="absolute inset-0 w-full h-full object-contain"
-                      style={{ 
+                      style={{
                         display: 'block',
                         zIndex: 1
                       }}

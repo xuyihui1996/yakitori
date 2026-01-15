@@ -56,7 +56,8 @@ export const GroupHome: React.FC = () => {
     saveGroupAsRestaurantMenu,
     getUserRestaurantMenus,
     importRestaurantMenuToGroup,
-    confirmCurrentRound
+    confirmCurrentRound,
+    closeCurrentRound,
   } = useGroupStore();
 
   const [showItemInput, setShowItemInput] = useState(false);
@@ -75,7 +76,7 @@ export const GroupHome: React.FC = () => {
   // 加载组数据
   useEffect(() => {
     const groupId = localStorage.getItem('ordered_group_id');
-    
+
     // 如果有组ID但没有加载组信息，尝试加载
     if (groupId && !currentGroup) {
       loadGroup(groupId).catch(() => {
@@ -115,23 +116,23 @@ export const GroupHome: React.FC = () => {
       if (!currentUser || !currentGroup) {
         return;
       }
-      
+
       const isOwner = currentUser.id === currentGroup.ownerId;
       if (!isOwner) {
         return;
       }
-      
+
       if (currentGroup.settled) {
         return;
       }
-      
+
       // 检查是否已经显示过导入弹窗（使用 groupId 作为 key）
       const importMenuKey = `import_menu_shown_${currentGroup.id}`;
       const hasShown = localStorage.getItem(importMenuKey);
       if (hasShown) {
         return;
       }
-      
+
       try {
         const menus = await getUserRestaurantMenus();
         if (menus.length > 0) {
@@ -248,7 +249,7 @@ export const GroupHome: React.FC = () => {
         const creatorId = result.conflict.existingItem?.createdBy || '';
         const creator = members.find(m => m.id === creatorId);
         const creatorName = creator?.name || creatorId;
-        
+
         // 显示更友好的对话框
         const message = t('home.priceConflictMessage', {
           creatorName,
@@ -256,7 +257,7 @@ export const GroupHome: React.FC = () => {
           inputPrice: String(price),
         });
         const useExisting = window.confirm(message);
-        
+
         if (useExisting) {
           // 使用现有价格，不添加新项，直接使用现有项添加订单
           const finalPrice = result.conflict.existingItem?.price || price;
@@ -274,10 +275,10 @@ export const GroupHome: React.FC = () => {
           // 用户选择更新价格
           // 先更新菜单和订单的价格
           await updateMenuItemPrice(nameDisplay, price);
-          
+
           // 等待一下确保数据同步
           await new Promise(resolve => setTimeout(resolve, 100));
-          
+
           // 使用更新后的价格添加订单
           if (currentRound) {
             await addOrderItem({
@@ -362,17 +363,40 @@ export const GroupHome: React.FC = () => {
     }
   };
 
-  // Owner最终确认结账
+  // Force start next round (for any member, if all confirmed)
+  const handleForceNextRound = async () => {
+    if (startNewRoundGuardRef.current) return;
+    if (!currentGroup || !currentRound || !currentUser) return;
+
+    if (!window.confirm(t('home.forceStartNextRoundConfirm'))) {
+      return;
+    }
+
+    startNewRoundGuardRef.current = true;
+    try {
+      // 1. Close current round
+      await closeCurrentRound();
+      // 2. Start new round
+      await createNewRound();
+      alert(t('home.startNewRoundDone'));
+    } catch (error) {
+      alert((error as Error).message);
+    } finally {
+      startNewRoundGuardRef.current = false;
+    }
+  };
+
+  // Owner finalized checkout
   const handleFinalizeCheckout = async () => {
     try {
       await finalizeCheckout();
       alert(t('home.checkoutFinalizeDone'));
-      
-      // 重新加载组数据
+
+      // Reload group data
       if (currentGroup) {
         await loadGroup(currentGroup.id);
       }
-      
+
       // 显示保存菜单弹窗（只显示一次，使用 localStorage 记录）
       if (currentGroup && currentUser) {
         const saveMenuKey = `save_menu_${currentGroup.id}_${currentUser.id}`;
@@ -414,7 +438,7 @@ export const GroupHome: React.FC = () => {
   // 添加Extra round调整项
   const handleAddExtraItem = async (nameDisplay: string, price: number, qty: number) => {
     if (!currentGroup || !currentUser) return;
-    
+
     try {
       // 直接调用API添加Extra round订单项
       await api.addRoundItem({
@@ -503,9 +527,8 @@ export const GroupHome: React.FC = () => {
               {isOwner && (
                 <button
                   onClick={() => setShowOwnerView((v) => !v)}
-                  className={`px-3 py-2 rounded-lg transition-colors flex items-center gap-2 shrink-0 ${
-                    showOwnerView ? 'bg-white/20' : 'hover:bg-white/10'
-                  }`}
+                  className={`px-3 py-2 rounded-lg transition-colors flex items-center gap-2 shrink-0 ${showOwnerView ? 'bg-white/20' : 'hover:bg-white/10'
+                    }`}
                   title={showOwnerView ? t('home.order') : t('home.summary')}
                   type="button"
                 >
@@ -556,7 +579,7 @@ export const GroupHome: React.FC = () => {
             {/* 管理员操作 */}
             <div className="bg-white rounded-lg shadow-sm border p-4 space-y-3">
               <h3 className="font-semibold text-gray-800 mb-3">{t('home.roundManage')}</h3>
-              
+
               {!currentRound && !currentGroup.settled && (
                 <button
                   onClick={handleStartNewRound}
@@ -747,6 +770,18 @@ export const GroupHome: React.FC = () => {
                       </span>
                     )}
                   </button>
+
+                  {/* Allow any user to force start next round if ALL confirmed */}
+                  {allConfirmed && !isConfirmingRound && (
+                    <button
+                      type="button"
+                      onClick={handleForceNextRound}
+                      className="w-full mt-3 bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 shadow-md flex items-center justify-center gap-2"
+                    >
+                      <PlayCircle size={20} />
+                      {t('home.forceStartNextRound')}
+                    </button>
+                  )}
                   <p className="text-xs text-gray-500 mt-2">
                     {t('home.confirmRoundHint')}
                   </p>
@@ -768,7 +803,7 @@ export const GroupHome: React.FC = () => {
             {!currentRound && !currentGroup.settled && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
                 <p className="text-yellow-800 mb-2">
-                  {isOwner 
+                  {isOwner
                     ? t('home.noRoundOwnerHint')
                     : t('home.noRoundMemberHint')}
                 </p>
