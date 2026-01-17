@@ -480,59 +480,69 @@ export const GroupHome: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      {/* 顶部状态栏 */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white sticky top-0 z-20 shadow-lg">
-        <div className="max-w-2xl mx-auto px-4 py-4">
-          <div className="flex justify-between items-start gap-3">
+      {/* 顶部状态栏 - Glassmorphism */}
+      <div className="glass-nav sticky top-0 z-20">
+        <div className="max-w-2xl mx-auto px-4 py-3">
+          <div className="flex justify-between items-center gap-3">
             <div className="min-w-0">
               <div className="flex items-center space-x-2">
-                <h1 className="text-2xl font-bold">{currentGroup.id}</h1>
+                <h1 className="text-xl font-bold text-slate-800">
+                  {currentGroup.id}
+                </h1>
                 {currentGroup.settled && (
-                  <span className="px-2 py-1 bg-white/20 rounded text-xs">
+                  <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full text-[10px] font-bold border border-gray-200 uppercase tracking-wide">
                     {t('home.settled')}
                   </span>
                 )}
               </div>
-              <div className="flex items-center space-x-3 mt-1 text-sm opacity-90">
+              <div className="flex items-center space-x-3 mt-0.5 text-xs text-slate-500 font-medium">
                 <span className="flex items-center space-x-1">
-                  <Users size={14} />
-                  <span>{members.length} 人</span>
+                  <Users size={12} className="text-slate-400" />
+                  <span>{members.length}</span>
                 </span>
                 {currentRound && (
                   <>
-                    <span>·</span>
-                    <span>{getRoundDisplayId(currentRound.id)}</span>
-                    <span className="px-2 py-0.5 bg-green-400 text-white rounded text-xs">
+                    <span className="text-slate-300">|</span>
+                    <span className="text-primary-600 bg-primary-50 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                      {getRoundDisplayId(currentRound.id)}
+                    </span>
+                    <span className="flex items-center gap-1 text-green-600">
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
                       {t('home.roundOpen')}
                     </span>
                   </>
                 )}
                 {!currentRound && (
                   <>
-                    <span>·</span>
-                    <span className="text-yellow-200">{t('home.noActiveRound')}</span>
+                    <span className="text-slate-300">|</span>
+                    <span className="text-amber-500">{t('home.noActiveRound')}</span>
                   </>
                 )}
               </div>
             </div>
             <div className="flex gap-2 items-center flex-nowrap shrink-0">
-              <LanguageToggle className="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium flex items-center gap-2 shrink-0" />
+              <LanguageToggle className="p-2 rounded-xl hover:bg-slate-100 text-slate-500 hover:text-primary-600 transition-colors shrink-0" />
               <button
                 onClick={() => navigate('/my-bill')}
-                className="p-2 hover:bg-white/10 rounded-lg transition-colors shrink-0"
+                className="p-2 hover:bg-primary-50 text-slate-500 hover:text-primary-600 rounded-xl transition-colors shrink-0 relative group"
                 title={t('home.myBill')}
               >
-                <Receipt size={24} />
+                <Receipt size={22} strokeWidth={1.5} />
+                <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                  {t('home.myBill')}
+                </span>
               </button>
               {isOwner && (
                 <button
                   onClick={() => setShowOwnerView((v) => !v)}
-                  className={`px-3 py-2 rounded-lg transition-colors flex items-center gap-2 shrink-0 ${showOwnerView ? 'bg-white/20' : 'hover:bg-white/10'
+                  className={`px-3 py-2 rounded-xl transition-all flex items-center gap-2 shrink-0 font-medium text-sm ${showOwnerView
+                    ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/20'
+                    : 'bg-white border border-slate-200 text-slate-600 hover:border-primary-200 hover:text-primary-600 hover:shadow-sm'
                     }`}
                   title={showOwnerView ? t('home.order') : t('home.summary')}
                   type="button"
                 >
-                  {showOwnerView ? <UtensilsCrossed size={20} /> : <BarChart3 size={20} />}
+                  {showOwnerView ? <UtensilsCrossed size={18} /> : <BarChart3 size={18} />}
                   <span className="hidden sm:inline">{showOwnerView ? t('home.order') : t('home.summary')}</span>
                 </button>
               )}
@@ -707,14 +717,14 @@ export const GroupHome: React.FC = () => {
                   <div className="flex gap-2">
                     <button
                       onClick={() => setShowSharedCreator(true)}
-                      className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-black font-medium flex items-center space-x-2"
+                      className="px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-900 font-medium flex items-center space-x-2 shadow-lg shadow-slate-200 transition-all hover:scale-105 active:scale-95"
                     >
                       <Plus size={18} />
                       <span>{t('home.newShared')}</span>
                     </button>
                     <button
                       onClick={() => setShowItemInput(!showItemInput)}
-                      className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium flex items-center space-x-2"
+                      className="px-4 py-2 bg-gradient-to-r from-primary-600 to-indigo-600 text-white rounded-xl hover:from-primary-700 hover:to-indigo-700 font-medium flex items-center space-x-2 shadow-lg shadow-primary-500/30 transition-all hover:scale-105 active:scale-95"
                     >
                       <Plus size={18} />
                       <span>{t('home.newDish')}</span>
@@ -745,7 +755,7 @@ export const GroupHome: React.FC = () => {
                   }}
                 />
 
-                <div className="sticky bottom-4">
+                <div className="sticky bottom-4 z-40">
                   <button
                     type="button"
                     onClick={() => {

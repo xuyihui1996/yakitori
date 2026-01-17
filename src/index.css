@@ -1,141 +1,90 @@
 /**
- * 全局样式
+ * Global Styles - Modern Premium Theme
  */
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* 基础样式重置 */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+@layer base {
+  :root {
+    /* Premium Indigo Theme */
+    --color-primary-50: #eef2ff;
+    --color-primary-100: #e0e7ff;
+    --color-primary-500: #6366f1;
+    --color-primary-600: #4f46e5;
+    --color-primary-700: #4338ca;
+
+    /* Soft Backgrounds */
+    --bg-page: #f8fafc;
+    --bg-card: #ffffff;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 font-sans antialiased;
+    /* Prevent overscroll bounce on iOS */
+    overscroll-behavior-y: none;
+  }
 }
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP';
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background-color: #f9fafb;
+@layer components {
+
+  /* Glassmorphism Utilities */
+  .glass-panel {
+    @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-sm;
+  }
+
+  .glass-nav {
+    @apply bg-white/70 backdrop-blur-lg border-b border-gray-200/50 shadow-sm transition-all duration-300;
+  }
+
+  .glass-button {
+    @apply bg-white/90 backdrop-blur active:bg-white/70 shadow-sm border border-gray-100 transition-all active:scale-95;
+  }
+
+  /* Modern Cards */
+  .premium-card {
+    @apply bg-white rounded-2xl shadow-sm border border-gray-100/50 overflow-hidden;
+  }
+
+  .premium-shadow {
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 0 3px rgba(0, 0, 0, 0.02);
+  }
+
+  /* Smooth Transitions */
+  .hover-lift {
+    @apply transition-transform duration-200 ease-out hover:-translate-y-0.5;
+  }
+
+  /* Custom Scrollbar for Menu */
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }
 
 /* 移动端优化 */
 @media (max-width: 768px) {
   body {
-    font-size: 16px; /* 防止iOS自动缩放 */
+    font-size: 16px;
   }
 }
 
-/* 输入框禁用缩放 */
+/* iOS Input Zoom Fix */
 input,
 textarea,
 select {
-  font-size: 16px !important; /* 防止iOS键盘弹出时页面缩放 */
+  font-size: 16px !important;
 }
 
-/* 自定义滚动条 */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
-
-/* 移动端触摸优化 */
+/* Global Reset & Touch Optimization */
 button,
 a,
 [role="button"] {
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
-
-/* 防止文本选择（移动端体验优化） */
-.no-select {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-}
-
-/* 加载动画 */
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
-/* PWA安装提示样式 */
-.pwa-install-prompt {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: white;
-  padding: 16px 24px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
-  max-width: 90%;
-}
-
-/* 渐变背景 */
-.gradient-bg {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-/* 卡片悬浮效果 */
-.card-hover {
-  transition: all 0.3s ease;
-}
-
-.card-hover:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-}
-
-/* 响应式容器 */
-.container-responsive {
-  width: 100%;
-  max-width: 768px;
-  margin: 0 auto;
-  padding: 0 16px;
-}
-
-/* 安全区域适配（iPhone X等） */
-@supports (padding: max(0px)) {
-  body {
-    padding-left: max(0px, env(safe-area-inset-left));
-    padding-right: max(0px, env(safe-area-inset-right));
-    padding-bottom: max(0px, env(safe-area-inset-bottom));
-  }
-}
-
-/* 数字输入框优化 */
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-input[type="number"] {
-  -moz-appearance: textfield;
-}
-
