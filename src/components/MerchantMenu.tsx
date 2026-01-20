@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import { MerchantMenuItem } from '@/data/merchantMenu';
 import { useI18n } from '@/i18n';
@@ -31,56 +31,82 @@ export const MerchantMenu: React.FC<Props> = ({ items, onAdd, disabled }) => {
   const listRef = useRef<HTMLDivElement>(null);
   const isScrollingRef = useRef(false);
 
-  // Scroll Spy Logic
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    if (isScrollingRef.current) return; // Skip if mechanically scrolling
+  // Scroll Spy Logic - Window based
+  useEffect(() => {
+    const handleScroll = () => {
+      if (isScrollingRef.current) return;
 
-    const container = e.currentTarget;
-    const categoryElements = categories.map(cat => ({
-      id: cat,
-      el: document.getElementById(`category-${cat}`)
-    }));
+      // Sticky header offset (approx 80px for header + some padding)
+      const offset = 100;
 
-    // Find the category that is currently most visible or at top
-    // Simple heuristic: find the first category whose top is >= container top - offset
-    // Or better: find closest to top
+      let closest = activeCategory;
+      let minDistance = Infinity;
 
-    // We add a small offset to account for padding
-    // const containerTop = container.scrollTop + container.offsetTop; 
+      for (const cat of categories) {
+        const el = document.getElementById(`category-${cat}`);
+        if (!el) {
+          continue;
+        }
 
-    // Find the section that covers the top of the viewport
-    let closest = activeCategory;
+        const rect = el.getBoundingClientRect();
+        // Distance of the element's top to the target offset
+        const distance = Math.abs(rect.top - offset);
 
-    for (const { id, el } of categoryElements) {
-      if (!el) continue;
-      // relative top to the scroll parent
-      const relativeTop = el.offsetTop - container.offsetTop;
-      const height = el.offsetHeight;
+        // Check if the section is currently active (top is above offset, bottom is below offset)
+        if (rect.top <= offset && rect.bottom > offset) {
+          closest = cat;
+          minDistance = 0; // Found exact match
+          break;
+        }
 
-      // If the section top is above the middle of viewport, or slightly below top
-      if (relativeTop <= container.scrollTop + 50 && relativeTop + height > container.scrollTop + 50) {
-        closest = id;
-        break;
+        // Fallback: find closest one if none match exact (rare but safe)
+        if (rect.top > offset && distance < minDistance) {
+          // This logic prefers upcoming sections, might not be ideal.
+          // Better logic: Last section that passed the threshold.
+        }
       }
-    }
 
-    if (closest && closest !== activeCategory) {
-      setActiveCategory(closest);
-      const sidebarEl = document.getElementById(`sidebar-cat-${closest}`);
-      sidebarEl?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
-    }
+      // Improved logic: find the last category whose top is <= offset
+      let active = categories[0];
+      for (const cat of categories) {
+        const el = document.getElementById(`category-${cat}`);
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        if (rect.top <= offset + 50) { // +50 tolerance
+          active = cat;
+        } else {
+          break; // Since they are ordered, once we find one below, we stop
+        }
+      }
+      closest = active;
 
-    isScrollingRef.current = false;
-  };
+      if (closest && closest !== activeCategory) {
+        setActiveCategory(closest);
+        // Also scroll sidebar processing
+        const sidebarEl = document.getElementById(`sidebar-cat-${closest}`);
+        // Only scroll sidebar if it's not visible? Or always center it?
+        // Since sidebar is sticky, we might not need to scroll it much if it fits?
+        // But if sidebar is long (scrollable within sticky), we might need it.
+        // Let's keep it simple: just set active state. 
+        // If sidebar overflows screen height, we might need to scroll it.
+        sidebarEl?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [categories, activeCategory]);
 
   const scrollToCategory = (cat: string) => {
     setActiveCategory(cat);
     const el = document.getElementById(`category-${cat}`);
     if (el) {
       isScrollingRef.current = true;
-      // const navHeight = 0; // Adjusted for sticky header
-      // const y = el.getBoundingClientRect().top + window.scrollY - navHeight;
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const navHeight = 80; // Header height
+      // Use window scrollTo
+      const y = el.getBoundingClientRect().top + window.scrollY - navHeight;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+
       setTimeout(() => { isScrollingRef.current = false; }, 800);
     }
   };
@@ -90,9 +116,9 @@ export const MerchantMenu: React.FC<Props> = ({ items, onAdd, disabled }) => {
   const pillInactiveClass = "text-slate-500 hover:bg-slate-100 hover:text-primary-600";
 
   return (
-    <div className="flex h-full bg-slate-50 relative overflow-hidden rounded-2xl shadow-sm border border-slate-100">
-      {/* Sidebar: Categories */}
-      <div className="w-24 flex-shrink-0 flex flex-col bg-white border-r border-slate-100 overflow-y-auto hide-scrollbar py-2 pb-20 z-10 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)]">
+    <div className="flex relative items-start">
+      {/* Sidebar: Categories - Sticky */}
+      <div className="w-24 flex-shrink-0 flex flex-col bg-white border border-slate-100 rounded-2xl mr-3 sticky top-24 overflow-y-auto max-h-[calc(100vh-8rem)] hide-scrollbar z-10 shadow-sm py-2">
         {categories.map((cat) => (
           <button
             key={cat}
@@ -110,19 +136,15 @@ export const MerchantMenu: React.FC<Props> = ({ items, onAdd, disabled }) => {
             )}
           </button>
         ))}
-        <div className="h-24"></div>
       </div>
 
       {/* Main Content: Menu Items */}
-      <div
-        className="flex-1 overflow-y-auto pb-24 scroll-smooth"
-        onScroll={handleScroll}
-        ref={listRef}
-      >
-        <div className="px-4 py-4 space-y-6">
+      <div className="flex-1 min-w-0" ref={listRef}>
+        <div className="space-y-6">
           {categories.map((cat) => (
-            <div key={cat} id={`category-${cat}`} className="scroll-mt-4">
-              <div className="sticky top-0 z-10 bg-slate-50/90 backdrop-blur-sm py-3 mb-2 flex items-center">
+            <div key={cat} id={`category-${cat}`} className="scroll-mt-24">
+              {/* Category Header */}
+              <div className="sticky top-[72px] z-10 bg-slate-50/95 backdrop-blur-sm py-3 mb-2 flex items-center rounded-lg">
                 <div className="w-1 h-4 bg-primary-500 rounded-full mr-2"></div>
                 <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest">
                   {cat}
@@ -221,7 +243,6 @@ export const MerchantMenu: React.FC<Props> = ({ items, onAdd, disabled }) => {
             </div>
           ))}
         </div>
-        <div className="h-28"></div>
       </div>
     </div>
   );
