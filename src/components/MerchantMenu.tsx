@@ -1,15 +1,16 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Users } from 'lucide-react';
 import { MerchantMenuItem } from '@/data/merchantMenu';
 import { useI18n } from '@/i18n';
 
 interface Props {
   items: MerchantMenuItem[];
   onAdd: (payload: { nameDisplay: string; price: number; qty: number; note?: string }) => Promise<void> | void;
+  onShare?: (payload: { nameDisplay: string; price: number; qty: number; note?: string }) => void;
   disabled?: boolean;
 }
 
-export const MerchantMenu: React.FC<Props> = ({ items, onAdd, disabled }) => {
+export const MerchantMenu: React.FC<Props> = ({ items, onAdd, onShare, disabled }) => {
   const { locale, t } = useI18n();
   const categories = useMemo(
     () => Array.from(new Set(items.map((it) => it.category))),
@@ -208,32 +209,56 @@ export const MerchantMenu: React.FC<Props> = ({ items, onAdd, disabled }) => {
                             </button>
                           </div>
 
-                          <button
-                            onClick={() => {
-                              const price = item.priceYen ?? parseInt(priceInputs[item.nameJa] || '0');
-                              if (!price) return;
+                          <div className="flex items-center gap-2">
+                            {onShare && (
+                              <button
+                                onClick={() => {
+                                  const price = item.priceYen ?? parseInt(priceInputs[item.nameJa] || '0');
+                                  if (!price) return;
 
-                              const qty = qtyInputs[item.nameJa] || 1;
+                                  const qty = qtyInputs[item.nameJa] || 1;
 
-                              onAdd({
-                                nameDisplay: locale === 'zh' ? item.nameZh : item.nameJa,
-                                price,
-                                qty
-                              });
-                              // Reset
-                              if (!item.priceYen) setPriceInputs(prev => ({ ...prev, [item.nameJa]: '' }));
-                              setQtyInputs(prev => ({ ...prev, [item.nameJa]: 1 }));
-                            }}
-                            disabled={disabled || (!item.priceYen && !priceInputs[item.nameJa])}
-                            className={`
-                                flex items-center gap-1.5 px-4 py-2 rounded-xl font-bold text-sm transition-all
-                                ${disabled || (!item.priceYen && !priceInputs[item.nameJa])
-                                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                                : 'bg-primary-600 text-white shadow-lg shadow-primary-500/30 hover:bg-primary-700 active:scale-95'}
-                              `}
-                          >
-                            <span>{t('menu.add')}</span>
-                          </button>
+                                  onShare({
+                                    nameDisplay: locale === 'zh' ? item.nameZh : item.nameJa,
+                                    price,
+                                    qty
+                                  });
+                                }}
+                                disabled={disabled || (!item.priceYen && !priceInputs[item.nameJa])}
+                                className="w-10 h-10 flex items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                title={t('home.newShared')}
+                              >
+                                <Users size={18} />
+                              </button>
+                            )}
+
+                            <button
+                              onClick={() => {
+                                const price = item.priceYen ?? parseInt(priceInputs[item.nameJa] || '0');
+                                if (!price) return;
+
+                                const qty = qtyInputs[item.nameJa] || 1;
+
+                                onAdd({
+                                  nameDisplay: locale === 'zh' ? item.nameZh : item.nameJa,
+                                  price,
+                                  qty
+                                });
+                                // Reset
+                                if (!item.priceYen) setPriceInputs(prev => ({ ...prev, [item.nameJa]: '' }));
+                                setQtyInputs(prev => ({ ...prev, [item.nameJa]: 1 }));
+                              }}
+                              disabled={disabled || (!item.priceYen && !priceInputs[item.nameJa])}
+                              className={`
+                                  flex items-center gap-1.5 px-4 py-2 rounded-xl font-bold text-sm transition-all
+                                  ${disabled || (!item.priceYen && !priceInputs[item.nameJa])
+                                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                  : 'bg-primary-600 text-white shadow-lg shadow-primary-500/30 hover:bg-primary-700 active:scale-95'}
+                                `}
+                            >
+                              <span>{t('menu.add')}</span>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>

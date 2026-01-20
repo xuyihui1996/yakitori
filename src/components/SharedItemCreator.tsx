@@ -19,6 +19,12 @@ interface SharedItemCreatorProps {
     allowSelfJoin?: boolean;
     allowClaimUnits?: boolean;
   }) => Promise<void>;
+  initialValues?: {
+    nameDisplay?: string;
+    price?: number;
+    qty?: number;
+    note?: string;
+  };
 }
 
 const modeLabel: Record<ShareMode, MessageKey> = {
@@ -32,12 +38,13 @@ export const SharedItemCreator: React.FC<SharedItemCreatorProps> = ({
   members,
   onClose,
   onCreate,
+  initialValues,
 }) => {
   const { t } = useI18n();
-  const [nameDisplay, setNameDisplay] = useState('');
-  const [price, setPrice] = useState('');
-  const [qty, setQty] = useState(1);
-  const [note, setNote] = useState('');
+  const [nameDisplay, setNameDisplay] = useState(initialValues?.nameDisplay || '');
+  const [price, setPrice] = useState(initialValues?.price ? String(initialValues.price) : '');
+  const [qty, setQty] = useState(initialValues?.qty || 1);
+  const [note, setNote] = useState(initialValues?.note || '');
 
   const [isShared, setIsShared] = useState(true);
   const [shareMode, setShareMode] = useState<ShareMode>('equal');
@@ -58,10 +65,10 @@ export const SharedItemCreator: React.FC<SharedItemCreatorProps> = ({
   if (!isOpen) return null;
 
   const reset = () => {
-    setNameDisplay('');
-    setPrice('');
-    setQty(1);
-    setNote('');
+    setNameDisplay(initialValues?.nameDisplay || '');
+    setPrice(initialValues?.price ? String(initialValues.price) : '');
+    setQty(initialValues?.qty || 1);
+    setNote(initialValues?.note || '');
     setIsShared(true);
     setShareMode('equal');
     setAllowSelfJoin(true);
@@ -102,9 +109,9 @@ export const SharedItemCreator: React.FC<SharedItemCreatorProps> = ({
           shareMode === 'units'
             ? []
             : selectedUserIds.map((uid) => ({
-                userId: uid,
-                weight: shareMode === 'ratio' ? Math.max(1, Math.floor(weights[uid] ?? 1)) : undefined,
-              }));
+              userId: uid,
+              weight: shareMode === 'ratio' ? Math.max(1, Math.floor(weights[uid] ?? 1)) : undefined,
+            }));
 
         await onCreate({
           ...base,
@@ -249,9 +256,8 @@ export const SharedItemCreator: React.FC<SharedItemCreatorProps> = ({
                       key={mode}
                       type="button"
                       onClick={() => setShareMode(mode)}
-                      className={`py-2.5 rounded-lg text-sm font-medium border ${
-                        shareMode === mode ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-700 border-gray-200'
-                      }`}
+                      className={`py-2.5 rounded-lg text-sm font-medium border ${shareMode === mode ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-700 border-gray-200'
+                        }`}
                       disabled={submitting}
                     >
                       {t(modeLabel[mode])}

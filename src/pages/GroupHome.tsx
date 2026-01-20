@@ -39,7 +39,6 @@ export const GroupHome: React.FC = () => {
     addMenuItem,
     updateMenuItemPrice,
     addOrderItem,
-    addRoundItem,
     deleteOrderItem,
     updateOrderItem,
     createSharedItem,
@@ -62,6 +61,12 @@ export const GroupHome: React.FC = () => {
 
   const [showItemInput, setShowItemInput] = useState(false);
   const [showSharedCreator, setShowSharedCreator] = useState(false);
+  const [sharedCreatorInitialData, setSharedCreatorInitialData] = useState<{
+    nameDisplay?: string;
+    price?: number;
+    qty?: number;
+    note?: string;
+  } | undefined>(undefined);
   const [showOwnerView, setShowOwnerView] = useState(false);
   const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
   const [showSaveMenuModal, setShowSaveMenuModal] = useState(false);
@@ -718,7 +723,10 @@ export const GroupHome: React.FC = () => {
                   </h2>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => setShowSharedCreator(true)}
+                      onClick={() => {
+                        setSharedCreatorInitialData(undefined);
+                        setShowSharedCreator(true);
+                      }}
                       className="px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-900 font-medium flex items-center space-x-2 shadow-lg shadow-slate-200 transition-all hover:scale-105 active:scale-95"
                     >
                       <Plus size={18} />
@@ -754,6 +762,10 @@ export const GroupHome: React.FC = () => {
                       qty,
                       note
                     });
+                  }}
+                  onShare={(item) => {
+                    setSharedCreatorInitialData(item);
+                    setShowSharedCreator(true);
                   }}
                 />
 
@@ -990,16 +1002,19 @@ export const GroupHome: React.FC = () => {
           onClose={() => setShowSharedCreator(false)}
           onCreate={async (data) => {
             if (!data.isShared) {
-              await addRoundItem({
-                nameDisplay: data.nameDisplay,
-                price: data.price,
-                qty: data.qty,
-                note: data.note,
-              });
+              if (currentRound) {
+                await addOrderItem({
+                  nameDisplay: data.nameDisplay,
+                  price: data.price,
+                  qty: data.qty,
+                  note: data.note,
+                });
+              }
               return;
             }
 
             if (!data.shareMode) throw new Error(t('shared.error.chooseShareMode'));
+
             await createSharedItem({
               nameDisplay: data.nameDisplay,
               price: data.price,
@@ -1011,6 +1026,7 @@ export const GroupHome: React.FC = () => {
               allowClaimUnits: data.allowClaimUnits,
             });
           }}
+          initialValues={sharedCreatorInitialData}
         />
       )}
     </div>
