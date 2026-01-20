@@ -573,8 +573,8 @@ export const GroupHome: React.FC = () => {
           </div>
         )}
 
-        {/* Owner视图 */}
-        {isOwner && showOwnerView && (
+        {/* Summary View (Formerly Owner View) */}
+        {showOwnerView && (
           <div className="space-y-4">
             <OwnerSummary
               rounds={rounds}
@@ -586,53 +586,55 @@ export const GroupHome: React.FC = () => {
               onRemoveMember={removeMember}
             />
 
-            {/* 管理员操作 */}
-            <div className="bg-white rounded-lg shadow-sm border p-4 space-y-3">
-              <h3 className="font-semibold text-gray-800 mb-3">{t('home.roundManage')}</h3>
+            {/* 管理员操作：仅 Owner 可见 */}
+            {isOwner && (
+              <div className="bg-white rounded-lg shadow-sm border p-4 space-y-3">
+                <h3 className="font-semibold text-gray-800 mb-3">{t('home.roundManage')}</h3>
 
-              {!currentRound && !currentGroup.settled && (
-                <button
-                  onClick={handleStartNewRound}
-                  className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center justify-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                  disabled={isCreatingRound || isClosingRound || isStartingCheckout || isFinalizingCheckout}
-                >
-                  <PlayCircle size={20} />
-                  <span>{isCreatingRound ? t('home.startNewRoundLoading') : t('home.startNewRound')}</span>
-                </button>
-              )}
+                {!currentRound && !currentGroup.settled && (
+                  <button
+                    onClick={handleStartNewRound}
+                    className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center justify-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                    disabled={isCreatingRound || isClosingRound || isStartingCheckout || isFinalizingCheckout}
+                  >
+                    <PlayCircle size={20} />
+                    <span>{isCreatingRound ? t('home.startNewRoundLoading') : t('home.startNewRound')}</span>
+                  </button>
+                )}
 
-              {!currentGroup.settled && (
-                <>
-                  {currentGroup.checkoutConfirming ? (
-                    <button
-                      onClick={handleFinalizeCheckout}
-                      className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center justify-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                      disabled={isFinalizingCheckout || isStartingCheckout || isCreatingRound || isClosingRound}
-                    >
-                      <CheckCircle size={20} />
-                      <span>{isFinalizingCheckout ? t('home.checkoutFinalizing') : t('home.checkoutFinalize')}</span>
-                    </button>
-                  ) : (
-                    <button
-                      onClick={handleStartCheckout}
-                      className="w-full py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium flex items-center justify-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                      disabled={isStartingCheckout || isFinalizingCheckout || isCreatingRound || isClosingRound}
-                    >
-                      <CheckCircle size={20} />
-                      <span>{isStartingCheckout ? t('home.checkoutStarting') : t('home.checkoutStart')}</span>
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
+                {!currentGroup.settled && (
+                  <>
+                    {currentGroup.checkoutConfirming ? (
+                      <button
+                        onClick={handleFinalizeCheckout}
+                        className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center justify-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                        disabled={isFinalizingCheckout || isStartingCheckout || isCreatingRound || isClosingRound}
+                      >
+                        <CheckCircle size={20} />
+                        <span>{isFinalizingCheckout ? t('home.checkoutFinalizing') : t('home.checkoutFinalize')}</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleStartCheckout}
+                        className="w-full py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium flex items-center justify-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                        disabled={isStartingCheckout || isFinalizingCheckout || isCreatingRound || isClosingRound}
+                      >
+                        <CheckCircle size={20} />
+                        <span>{isStartingCheckout ? t('home.checkoutStarting') : t('home.checkoutStart')}</span>
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
           </div>
         )}
 
         {/* 普通点单视图 */}
-        {(!isOwner || !showOwnerView) && (
+        {!showOwnerView && (
           <>
-            {/* Owner 快速汇总入口 */}
-            {isOwner && currentRound && !currentGroup.settled && (
+            {/* Owner 快速汇总入口 -> 改为全员可见的 Group Bill 入口 */}
+            {currentRound && !currentGroup.settled && (
               <button
                 onClick={() => setShowOwnerView(true)}
                 className="w-full text-left bg-white rounded-2xl shadow-sm border p-4 hover:bg-gray-50"
