@@ -17,6 +17,7 @@ export const MerchantMenu: React.FC<Props> = ({ items, onAdd, disabled }) => {
   );
   const [activeCategory, setActiveCategory] = useState(categories[0] || '');
   const [priceInputs, setPriceInputs] = useState<Record<string, string>>({});
+  const [qtyInputs, setQtyInputs] = useState<Record<string, number>>({});
 
   // Group items by category for continuous rendering
   const groupedItems = useMemo(() => {
@@ -164,27 +165,51 @@ export const MerchantMenu: React.FC<Props> = ({ items, onAdd, disabled }) => {
                         )}
 
                         <div className="flex items-center gap-3 ml-auto">
+                          {/* Quantity Selector */}
+                          <div className="flex items-center bg-slate-100 rounded-lg p-1">
+                            <button
+                              onClick={() => setQtyInputs(prev => ({ ...prev, [item.nameJa]: Math.max(1, (prev[item.nameJa] || 1) - 1) }))}
+                              className="w-8 h-8 flex items-center justify-center bg-white rounded-md shadow-sm text-slate-600 hover:text-primary-600 active:scale-95 transition-all disabled:opacity-50"
+                              disabled={disabled}
+                            >
+                              <span className="text-lg font-bold mb-0.5">-</span>
+                            </button>
+                            <span className="w-10 text-center font-bold text-slate-700">
+                              {qtyInputs[item.nameJa] || 1}
+                            </span>
+                            <button
+                              onClick={() => setQtyInputs(prev => ({ ...prev, [item.nameJa]: (prev[item.nameJa] || 1) + 1 }))}
+                              className="w-8 h-8 flex items-center justify-center bg-white rounded-md shadow-sm text-slate-600 hover:text-primary-600 active:scale-95 transition-all disabled:opacity-50"
+                              disabled={disabled}
+                            >
+                              <Plus size={16} strokeWidth={3} />
+                            </button>
+                          </div>
+
                           <button
                             onClick={() => {
                               const price = item.priceYen ?? parseInt(priceInputs[item.nameJa] || '0');
                               if (!price) return;
+
+                              const qty = qtyInputs[item.nameJa] || 1;
+
                               onAdd({
                                 nameDisplay: locale === 'zh' ? item.nameZh : item.nameJa,
                                 price,
-                                qty: 1
+                                qty
                               });
+                              // Reset
                               if (!item.priceYen) setPriceInputs(prev => ({ ...prev, [item.nameJa]: '' }));
+                              setQtyInputs(prev => ({ ...prev, [item.nameJa]: 1 }));
                             }}
                             disabled={disabled || (!item.priceYen && !priceInputs[item.nameJa])}
                             className={`
-                                flex items-center gap-1.5 px-4 py-1.5 rounded-full font-semibold text-sm transition-all
+                                flex items-center gap-1.5 px-4 py-2 rounded-xl font-bold text-sm transition-all
                                 ${disabled || (!item.priceYen && !priceInputs[item.nameJa])
                                 ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                                : 'bg-primary-600 text-white shadow-lg shadow-primary-500/30 hover:bg-primary-700 active:scale-95'
-                              }
+                                : 'bg-primary-600 text-white shadow-lg shadow-primary-500/30 hover:bg-primary-700 active:scale-95'}
                               `}
                           >
-                            <Plus size={16} strokeWidth={3} />
                             <span>{t('menu.add')}</span>
                           </button>
                         </div>

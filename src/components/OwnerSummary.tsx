@@ -41,9 +41,9 @@ export const OwnerSummary: React.FC<OwnerSummaryProps> = ({
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
       .map(round => {
         const items = allItems.filter(item => item.roundId === round.id && !item.deleted);
-        const aggregated = aggregateItemsByName(items);
+        const aggregated = aggregateItemsByName(items, locale);
         const total = calculateTotal(items);
-        
+
         return {
           round,
           items,
@@ -51,16 +51,16 @@ export const OwnerSummary: React.FC<OwnerSummaryProps> = ({
           total
         };
       });
-  }, [rounds, allItems]);
+  }, [rounds, allItems, locale]);
 
   // 全部汇总
   const totalSummary = useMemo(() => {
     const validItems = allItems.filter(item => !item.deleted);
-    const aggregated = aggregateItemsByName(validItems);
+    const aggregated = aggregateItemsByName(validItems, locale);
     const total = calculateTotal(validItems);
-    
+
     return { aggregated, total };
-  }, [allItems]);
+  }, [allItems, locale]);
 
   // 按人汇总
   const memberSummaries = useMemo(() => {
@@ -73,7 +73,7 @@ export const OwnerSummary: React.FC<OwnerSummaryProps> = ({
         .reduce((sum, item) => sum + getUserOwedYenForRoundItem(item, member.id), 0);
 
       const total = calculateTotal(memberNormalItems) + sharedOwed;
-      
+
       return {
         member,
         itemCount:
@@ -87,7 +87,7 @@ export const OwnerSummary: React.FC<OwnerSummaryProps> = ({
   const handleExport = async () => {
     const text = generateFullExportText(rounds, allItems, groupId, locale);
     const success = await copyToClipboard(text);
-    
+
     if (success) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -204,7 +204,7 @@ export const OwnerSummary: React.FC<OwnerSummaryProps> = ({
         <div className="divide-y">
           {roundSummaries.map(({ round, aggregated, total }) => {
             const isExpanded = expandedRounds.has(round.id);
-            
+
             return (
               <div key={round.id}>
                 <button
@@ -213,11 +213,10 @@ export const OwnerSummary: React.FC<OwnerSummaryProps> = ({
                 >
                   <div className="flex items-center space-x-3">
                     <span className="font-medium text-gray-900">{getRoundDisplayId(round.id)}</span>
-                    <span className={`text-xs px-2 py-1 rounded ${
-                      round.status === 'open' 
+                    <span className={`text-xs px-2 py-1 rounded ${round.status === 'open'
                         ? 'bg-green-100 text-green-700'
                         : 'bg-gray-100 text-gray-600'
-                    }`}>
+                      }`}>
                       {round.status === 'open' ? t('owner.roundOpen') : t('owner.roundClosed')}
                     </span>
                   </div>
@@ -228,7 +227,7 @@ export const OwnerSummary: React.FC<OwnerSummaryProps> = ({
                     {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                   </div>
                 </button>
-                
+
                 {isExpanded && (
                   <div className="px-4 pb-4 bg-gray-50">
                     <div className="space-y-2">
@@ -277,7 +276,7 @@ export const OwnerSummary: React.FC<OwnerSummaryProps> = ({
             </div>
           ))}
         </div>
-        
+
         <div className="mt-4 pt-4 border-t flex justify-between items-center">
           <span className="text-lg font-semibold text-gray-800">{t('owner.total')}</span>
           <span className="text-2xl font-bold text-primary-600">
