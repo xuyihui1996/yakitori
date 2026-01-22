@@ -5,8 +5,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, LogIn, Copy, Check } from 'lucide-react';
+import { Plus, LogIn, Copy, Check, User as UserIcon } from 'lucide-react';
 import { useGroupStore } from '@/store/groupStore';
+import { User } from '@/types';
 import { generateQRCodeDataURL, generateJoinLink } from '@/utils/qrcode';
 import { useI18n } from '@/i18n';
 import { LanguageToggle } from '@/components/LanguageToggle';
@@ -33,6 +34,7 @@ export const JoinGroup: React.FC = () => {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   const [linkCopied, setLinkCopied] = useState(false);
   const [isInAppBrowser, setIsInAppBrowser] = useState(false);
+  const [existingMembers, setExistingMembers] = useState<User[]>([]);
 
   useEffect(() => {
     const ua = navigator.userAgent.toLowerCase();
@@ -45,6 +47,8 @@ export const JoinGroup: React.FC = () => {
   // 检查URL参数（扫码打开）
   useEffect(() => {
     const urlGroupId = searchParams.get('groupId');
+    const localUserId = localStorage.getItem('ordered_user_id');
+
     if (urlGroupId) {
       setMode('join');
       setGroupId(urlGroupId.toUpperCase());
@@ -52,8 +56,23 @@ export const JoinGroup: React.FC = () => {
       setError('');
       setCreatedGroupId(null);
       setQrCodeUrl('');
+
+      // If we have a group ID but no logged in user, fetch the group to show members
+      if (!localUserId) {
+        // We use the api directly via store action to avoid setting currentGroup if not needed? 
+        // Actually loadGroup sets state, which is fine, we just want members.
+        loadGroup(urlGroupId.toUpperCase())
+          .then(() => {
+            // Access store to get members
+            const store = useGroupStore.getState();
+            if (store.members && store.members.length > 0) {
+              setExistingMembers(store.members);
+            }
+          })
+          .catch(e => console.warn('Failed to load preview group', e));
+      }
     }
-  }, [searchParams]);
+  }, [searchParams, loadGroup]);
 
   // 如果已有身份，自动跳转到组页面
   useEffect(() => {
@@ -211,8 +230,8 @@ export const JoinGroup: React.FC = () => {
             <button
               onClick={() => setMode('create')}
               className={`flex-1 py-4 font-medium transition-colors ${mode === 'create'
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                ? 'bg-primary-600 text-white'
+                : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
                 }`}
             >
               <Plus size={20} className="inline mr-2" />
@@ -221,8 +240,8 @@ export const JoinGroup: React.FC = () => {
             <button
               onClick={() => setMode('join')}
               className={`flex-1 py-4 font-medium transition-colors ${mode === 'join'
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                ? 'bg-primary-600 text-white'
+                : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
                 }`}
             >
               <LogIn size={20} className="inline mr-2" />
@@ -232,6 +251,48 @@ export const JoinGroup: React.FC = () => {
 
           {/* 表单区域 */}
           <div className="p-6">
+            {/* Reclaim Identity Section */}
+            {mode === 'join' && existingMembers.length > 0 && (
+              <div className="mb-6 p-4 bg-indigo-50 border border-indigo-100 rounded-xl">
+                <div className="flex items-start gap-3 mb-3">
+                  <UserIcon className="text-indigo-600 mt-0.5" size={20} />
+                  <div>
+                    <h3 className="font-semibold text-indigo-900">{t('join.reclaimTitle')}</h3>
+                    <p className="text-sm text-indigo-700">{t('join.reclaimHint')}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {existingMembers.map(member => (
+                    <button
+                      key={member.id}
+                      onClick={() => {
+                        // Reclaim Logic
+                        const { setCurrentUser } = useGroupStore.getState();
+                        localStorage.setItem('ordered_user_id', member.id);
+                        localStorage.setItem('ordered_group_id', groupId);
+                        setCurrentUser(member);
+                        navigate('/group');
+                      }}
+                      className="p-3 bg-white border border-indigo-200 rounded-lg text-left hover:bg-indigo-100 hover:border-indigo-300 transition-all font-medium text-indigo-900 shadow-sm"
+                    >
+                      {member.name}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-4 flex items-center gap-2">
+                  <div className="h-px bg-indigo-200 flex-1"></div>
+                  <span className="text-xs text-indigo-400 font-medium">{t('join.reclaimOr')}</span>
+                  <div className="h-px bg-indigo-200 flex-1"></div>
+                </div>
+
+                <p className="text-center mt-2 text-xs text-indigo-500 font-medium">
+                  {t('join.reclaimNew')}
+                </p>
+              </div>
+            )}
+
             {mode === 'create' ? (
               <form onSubmit={handleCreate} className="space-y-4">
                 <div>
