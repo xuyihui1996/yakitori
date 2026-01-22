@@ -729,12 +729,19 @@ export const GroupHome: React.FC = () => {
                 <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] px-4 py-3 z-50 safe-area-bottom">
                   <div className="max-w-2xl mx-auto flex items-center justify-between gap-4">
                     {/* Left: Cart Icon */}
-                    <div className="relative p-2 bg-gray-50 rounded-full text-gray-400">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (currentRound) setConfirmModalRoundId(currentRound.id);
+                      }}
+                      className="relative p-2 bg-gray-50 rounded-full text-gray-500 hover:bg-gray-100 hover:text-primary-600 transition-colors active:scale-95"
+                      aria-label="View Cart"
+                    >
                       <ShoppingCart size={24} />
                       {totals.currentTotal > 0 && (
                         <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
                       )}
-                    </div>
+                    </button>
 
                     {/* Middle: Total Price */}
                     <div className="flex-1 flex flex-col items-start justify-center">
