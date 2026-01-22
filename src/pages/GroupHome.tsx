@@ -5,7 +5,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Users, Receipt, PlayCircle, CheckCircle, BarChart3, X, UtensilsCrossed } from 'lucide-react';
+import { Plus, Users, Receipt, PlayCircle, CheckCircle, BarChart3, X, UtensilsCrossed, ShoppingCart } from 'lucide-react';
+import { ShareMode } from '@/types';
 import { useGroupStore } from '@/store/groupStore';
 import { ItemInput } from '@/components/ItemInput';
 import { MerchantMenu } from '@/components/MerchantMenu';
@@ -41,7 +42,7 @@ export const GroupHome: React.FC = () => {
     addOrderItem,
     deleteOrderItem,
     updateOrderItem,
-    createSharedItem,
+    // createSharedItem, // Removed unused import
     joinSharedItem,
     addParticipantsToSharedItem,
     removeParticipantFromSharedItem,
@@ -623,42 +624,13 @@ export const GroupHome: React.FC = () => {
         {/* 普通点单视图 */}
         {!showOwnerView && (
           <>
-            {/* Owner 快速汇总入口 -> 改为全员可见的 Group Bill 入口 */}
-            {currentRound && !currentGroup.settled && (
-              <button
-                onClick={() => setShowOwnerView(true)}
-                className="w-full text-left bg-white rounded-2xl shadow-sm border p-4 hover:bg-gray-50"
-                type="button"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm text-gray-500">{t('home.summaryCardTitle')}</p>
-                    <div className="mt-2 flex items-end gap-6">
-                      <div>
-                        <p className="text-xs text-gray-500">{t('home.summaryCardRoundTotal')}</p>
-                        <p className="text-2xl font-bold text-gray-900">{t('money.yen')}{totals.currentTotal.toLocaleString('ja-JP')}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500">{t('home.summaryCardAllTotal')}</p>
-                        <p className="text-2xl font-bold text-primary-700">{t('money.yen')}{totals.allTotal.toLocaleString('ja-JP')}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 text-primary-700 font-semibold">
-                    <BarChart3 size={18} />
-                    <span className="text-sm">{t('home.summaryCardCta')}</span>
-                  </div>
-                </div>
-              </button>
-            )}
-
-            {/* 我的订单 */}
+            {/* My Order Section */}
             <div>
               <h2 className="text-lg font-semibold text-gray-800 mb-3">
                 {t('home.myOrder')}
               </h2>
 
-              {/* 当前轮共享入口 */}
+              {/* Shared Item Join Banner */}
               {currentRound && currentRoundSharedItems.length > 0 && (
                 <SharedJoinBanner
                   sharedItems={currentRoundSharedItems}
@@ -699,7 +671,7 @@ export const GroupHome: React.FC = () => {
               />
             </div>
 
-            {/* 商家菜单式点单区 */}
+            {/* Merchant Menu Section */}
             {!currentGroup.settled && currentRound && (
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
@@ -754,44 +726,75 @@ export const GroupHome: React.FC = () => {
                   }}
                 />
 
-                <div className="sticky bottom-4 z-40">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (currentRound) setConfirmModalRoundId(currentRound.id);
-                    }}
-                    disabled={
-                      currentGroup.settled ||
-                      !currentRound ||
-                      isConfirmingRound ||
-                      allConfirmed
-                    }
-                    className="w-full mt-3 bg-primary-600 text-white py-3 rounded-xl font-semibold hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed shadow-md"
-                  >
-                    {isConfirmingRound
-                      ? t('home.confirmRoundLoading')
-                      : allConfirmed
-                        ? t('home.confirmRoundDone')
-                        : t('home.confirmRound')}
-                    {!allConfirmed && (
-                      <span className="ml-2 text-sm text-white/80">
-                        {confirmedCount}/{totalMembers}
-                      </span>
-                    )}
-                  </button>
+                <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] px-4 py-3 z-50 safe-area-bottom">
+                  <div className="max-w-2xl mx-auto flex items-center justify-between gap-4">
+                    {/* Left: Cart Icon */}
+                    <div className="relative p-2 bg-gray-50 rounded-full text-gray-400">
+                      <ShoppingCart size={24} />
+                      {totals.currentTotal > 0 && (
+                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                      )}
+                    </div>
 
-                  {/* Allow any user to force start next round if ALL confirmed */}
-                  {allConfirmed && !isConfirmingRound && (
+                    {/* Middle: Total Price */}
+                    <div className="flex-1 flex flex-col items-start justify-center">
+                      <span className="text-xs text-gray-500 font-medium">
+                        {t('home.confirmRoundTotal')}
+                      </span>
+                      <span className="text-xl font-bold text-gray-900 leading-tight">
+                        {t('money.yen')}{totals.currentTotal.toLocaleString('ja-JP')}
+                      </span>
+                    </div>
+
+                    {/* Right: Submit Button */}
                     <button
                       type="button"
-                      onClick={handleForceNextRound}
-                      className="w-full mt-3 bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 shadow-md flex items-center justify-center gap-2"
+                      onClick={() => {
+                        if (currentRound) setConfirmModalRoundId(currentRound.id);
+                      }}
+                      disabled={
+                        currentGroup.settled ||
+                        !currentRound ||
+                        isConfirmingRound ||
+                        allConfirmed
+                      }
+                      className={`
+                        px-6 py-2.5 rounded-full font-semibold text-white shadow-md transition-all
+                        ${allConfirmed
+                          ? 'bg-green-600 hover:bg-green-700'
+                          : 'bg-gray-900 hover:bg-gray-800'
+                        }
+                        disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none
+                      `}
                     >
-                      <PlayCircle size={20} />
-                      {t('home.forceStartNextRound')}
+                      {isConfirmingRound
+                        ? t('home.confirmRoundLoading')
+                        : allConfirmed
+                          ? t('home.confirmRoundDone')
+                          : t('home.confirmRound')}
                     </button>
-                  )}
-                  <p className="text-xs text-gray-500 mt-2">
+                  </div>
+                </div>
+
+                {/* Allow any user to force start next round if ALL confirmed */}
+                {allConfirmed && !isConfirmingRound && (
+                  <button
+                    type="button"
+                    onClick={handleForceNextRound}
+                    className="w-full mt-3 bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 shadow-md flex items-center justify-center gap-2"
+                  >
+                    <PlayCircle size={20} />
+                    {t('home.forceStartNextRound')}
+                  </button>
+                )}
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-sm font-medium text-blue-900">
+                      {t('home.confirmRoundStatusTitle')}
+                    </h3>
+                  </div>
+                  <p className="text-xs text-gray-500">
                     {t('home.confirmRoundHint')}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
@@ -998,18 +1001,38 @@ export const GroupHome: React.FC = () => {
               return;
             }
 
-            if (!data.shareMode) throw new Error(t('shared.error.chooseShareMode'));
+            try {
+              if (!currentRound) throw new Error('No current round');
 
-            await createSharedItem({
-              nameDisplay: data.nameDisplay,
-              price: data.price,
-              qty: data.qty,
-              note: data.note,
-              shareMode: data.shareMode,
-              shares: data.shares,
-              allowSelfJoin: data.allowSelfJoin,
-              allowClaimUnits: data.allowClaimUnits,
-            });
+              // SharedItemCreator produces a full object suitable for addRoundItem logic
+              // We reuse addRoundItem but need to expose the ability to set shared fields
+              // Since addRoundItem in store/service might be simple, we use the store action 'addOrderItem' if it supports it,
+              // or we call api.addRoundItem directly.
+              // Check api.addRoundItem signature: it takes (groupId, roundId, userId, item)
+              // But here we want to use the store's addOrderItem if possible to keep state sync?
+              // Actually, the store's addOrderItem only takes simple partials.
+              // We should use api.addRoundItem directly for this complex shared item.
+
+              await api.addRoundItem({
+                groupId: currentGroup.id,
+                roundId: currentRound.id,
+                userId: currentUser.id,
+                nameDisplay: data.nameDisplay,
+                price: data.price,
+                qty: data.qty,
+                note: data.note,
+                isShared: true,
+                shareMode: (data.shareMode || 'fixed_amount') as ShareMode,
+                shares: data.shares || [],
+                allowSelfJoin: data.allowSelfJoin,
+                allowClaimUnits: data.allowClaimUnits
+              });
+
+              // Reload group data
+              await loadGroup(currentGroup.id);
+            } catch (err) {
+              alert((err as Error).message);
+            }
           }}
           initialValues={sharedCreatorInitialData}
         />
