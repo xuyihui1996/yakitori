@@ -96,7 +96,7 @@ interface GroupState {
   // 结账
   startCheckoutConfirmation: () => Promise<void>;
   confirmMemberOrder: () => Promise<void>;
-  finalizeCheckout: () => Promise<void>;
+  finalizeCheckout: (options?: { force?: boolean }) => Promise<void>;
   settleGroup: () => Promise<void>;
 
   // 成员管理
@@ -142,7 +142,7 @@ export const useGroupStore = create<GroupState>((set, get) => ({
       const { group, user } = await api.createGroup(ownerName);
       localStorage.setItem('ordered_user_id', user.id);
       localStorage.setItem('ordered_group_id', group.id);
-      
+
       set({
         currentUser: user,
         currentGroup: group,
@@ -153,7 +153,7 @@ export const useGroupStore = create<GroupState>((set, get) => ({
       // 加载其他数据
       await get().loadRounds();
       await get().loadMenu();
-      
+
       return { group, user };
     } catch (error) {
       set({ error: (error as Error).message, loading: false });
@@ -167,7 +167,7 @@ export const useGroupStore = create<GroupState>((set, get) => ({
       const { group, user } = await api.joinGroup(groupId, userName);
       localStorage.setItem('ordered_user_id', user.id);
       localStorage.setItem('ordered_group_id', group.id);
-      
+
       set({
         currentUser: user,
         currentGroup: group,
@@ -186,7 +186,7 @@ export const useGroupStore = create<GroupState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const { group, members, currentRound } = await api.getGroup(groupId);
-      
+
       set({
         currentGroup: group,
         members,
@@ -303,9 +303,9 @@ export const useGroupStore = create<GroupState>((set, get) => ({
 
     // 找到所有同名同组的菜单项
     const sameNameItems = menu.filter(
-      item => item.nameDisplay.trim() === nameDisplay.trim() && 
-              item.groupId === currentGroup.id &&
-              item.status === 'active'
+      item => item.nameDisplay.trim() === nameDisplay.trim() &&
+        item.groupId === currentGroup.id &&
+        item.status === 'active'
     );
 
     // 更新所有同名菜单项的价格（并行处理）
@@ -323,7 +323,7 @@ export const useGroupStore = create<GroupState>((set, get) => ({
     // 使用本地缓存的 allRoundItems，找到所有同名的订单项
     // 这样避免为每个轮次串行请求数据
     const sameNameOrderItems = allRoundItems.filter(
-      orderItem => 
+      orderItem =>
         orderItem.nameDisplay.trim() === nameDisplay.trim() &&
         orderItem.groupId === currentGroup.id &&
         !orderItem.deleted
@@ -333,7 +333,7 @@ export const useGroupStore = create<GroupState>((set, get) => ({
     const isOwner = currentGroup.ownerId === currentUser.id;
     const updatePromises = sameNameOrderItems.map(async (orderItem) => {
       const canUpdate = isOwner || orderItem.userId === currentUser.id;
-      
+
       if (canUpdate) {
         try {
           await api.updateRoundItem(orderItem.id, currentUser.id, {
@@ -357,7 +357,7 @@ export const useGroupStore = create<GroupState>((set, get) => ({
       get().loadRounds(),
       get().loadAllRoundItems() // 重新加载所有订单项以更新本地缓存
     ]);
-    
+
     // 重新加载当前轮的订单项（如果存在）
     const currentRound = get().currentRound;
     if (currentRound) {
@@ -720,7 +720,7 @@ export const useGroupStore = create<GroupState>((set, get) => ({
     }
   },
 
-  finalizeCheckout: async () => {
+  finalizeCheckout: async (options) => {
     const { currentGroup, currentUser } = get();
     if (!currentGroup || !currentUser) return;
     if (get().actionLoading.finalizeCheckout) return;
@@ -737,7 +737,7 @@ export const useGroupStore = create<GroupState>((set, get) => ({
         }
       }
 
-      await api.finalizeCheckout(currentGroup.id, currentUser.id);
+      await api.finalizeCheckout(currentGroup.id, currentUser.id, options);
       await get().loadGroup(currentGroup.id);
     } catch (error) {
       set({ error: (error as Error).message });
@@ -903,10 +903,10 @@ export const useGroupStore = create<GroupState>((set, get) => ({
         restaurantMenuId,
         currentUser.id
       );
-      
+
       // 重新加载菜单
       await get().loadMenu();
-      
+
       return result;
     } catch (error) {
       set({ error: (error as Error).message });

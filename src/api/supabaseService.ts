@@ -44,10 +44,10 @@ import { translate } from '@/i18n/global';
  */
 export async function createUser(name: string): Promise<User> {
   const createUserClient = ensureSupabase();
-  
+
   // 检查 localStorage 中是否已有用户ID，如果有就复用（保持用户身份一致）
   let userId = localStorage.getItem('ordered_user_id');
-  
+
   if (userId) {
     // 尝试从数据库获取现有用户
     const { data: existingUser, error: fetchError } = await createUserClient
@@ -55,19 +55,19 @@ export async function createUser(name: string): Promise<User> {
       .select('*')
       .eq('id', userId)
       .single();
-    
+
     if (existingUser && !fetchError) {
       // 用户已存在，更新用户名（可能用户改了名字）
       const { error: updateError } = await createUserClient
         .from('users')
         .update({ name })
         .eq('id', userId);
-      
+
       if (updateError) {
         console.warn('Failed to update user name:', updateError);
         // 不抛出错误，继续使用旧名字
       }
-      
+
       return {
         id: existingUser.id,
         name: existingUser.name,
@@ -77,13 +77,13 @@ export async function createUser(name: string): Promise<User> {
     // 没有保存的用户ID，生成新用户ID
     userId = generateUniqueId('U');
   }
-  
+
   // 插入时使用数据库字段名（snake_case）
   const { error } = await createUserClient.from('users').insert([{
     id: userId,
     name: name,
   }]);
-  
+
   if (error) {
     // 如果是因为用户已存在（可能是并发创建），尝试获取现有用户
     if (error.code === '23505' || error.message.includes('duplicate')) {
@@ -92,7 +92,7 @@ export async function createUser(name: string): Promise<User> {
         .select('*')
         .eq('id', userId)
         .single();
-      
+
       if (existingUser) {
         return {
           id: existingUser.id,
@@ -100,7 +100,7 @@ export async function createUser(name: string): Promise<User> {
         };
       }
     }
-    
+
     console.error('Failed to create user:', error);
     throw new Error('创建用户失败: ' + error.message);
   }
@@ -131,7 +131,7 @@ export async function getUser(userId: string): Promise<User | undefined> {
  */
 export async function getUsers(userIds: string[]): Promise<User[]> {
   if (userIds.length === 0) return [];
-  
+
   const getUsersClient = ensureSupabase();
   const { data, error } = await getUsersClient
     .from('users')
@@ -154,7 +154,7 @@ export async function createGroup(ownerName: string): Promise<{ group: Group; us
   // 2. 创建组
   const now = new Date().toISOString();
   const groupId = 'G' + generateShortId();
-  
+
   // 插入时使用数据库字段名（snake_case）
   const { error: groupError } = await ensureSupabase().from('groups').insert([{
     id: groupId,
@@ -193,7 +193,7 @@ export async function createGroup(ownerName: string): Promise<{ group: Group; us
 
   // 3. 自动创建第一轮（为每个组生成唯一的轮次ID）
   const firstRoundId = `${group.id}_R1`; // 使用组ID+轮次编号作为唯一ID
-  
+
   // 先检查是否已存在该轮次
   const roundClient = ensureSupabase();
   const { data: existingRound } = await roundClient
@@ -385,7 +385,7 @@ export async function addMenuItem(
   item: Omit<GroupMenuItem, 'id' | 'createdAt'>
 ): Promise<GroupMenuItem> {
   const normalizedName = normalizeDishName(item.nameDisplay);
-  
+
   // 检查同组内是否已存在同名active菜品
   const checkClient = ensureSupabase();
   const { data: existingItems } = await checkClient
@@ -394,7 +394,7 @@ export async function addMenuItem(
     .eq('group_id', item.groupId)
     .eq('status', 'active')
     .ilike('name_display', normalizedName);
-  
+
   if (existingItems && existingItems.length > 0) {
     const existing = existingItems[0];
     const error: any = new Error('菜名已存在');
@@ -505,27 +505,27 @@ export async function updateMenuItemName(
   userId: string
 ): Promise<GroupMenuItem> {
   const client = ensureSupabase();
-  
+
   // 1. 校验组是否已结账
   const { data: groupData, error: groupError } = await client
     .from('groups')
     .select('settled')
     .eq('id', groupId)
     .single();
-  
+
   if (groupError || !groupData) {
     throw new Error('组不存在');
   }
-  
+
   if (groupData.settled) {
     const error: any = new Error('该桌已结账，无法修改菜名');
     error.status = 403;
     throw error;
   }
-  
+
   // 2. 规范化新名称
   const normalizedName = normalizeDishName(newName);
-  
+
   // 3. 检查冲突：同组内是否已有active的新名称（排除自己）
   const { data: conflictItems } = await client
     .from('group_menu_items')
@@ -534,7 +534,7 @@ export async function updateMenuItemName(
     .eq('status', 'active')
     .ilike('name_display', normalizedName)
     .neq('id', menuItemId);
-  
+
   if (conflictItems && conflictItems.length > 0) {
     const existing = conflictItems[0];
     const error: any = new Error('菜名已存在，请重新命名');
@@ -551,7 +551,7 @@ export async function updateMenuItemName(
     } as GroupMenuItem;
     throw error;
   }
-  
+
   // 4. 更新菜单项名称
   const now = new Date().toISOString();
   const { data: updatedMenuItem, error: updateError } = await client
@@ -564,7 +564,7 @@ export async function updateMenuItemName(
     .eq('id', menuItemId)
     .select()
     .single();
-  
+
   if (updateError) {
     // 如果是唯一约束冲突（数据库层面）
     if (updateError.code === '23505') {
@@ -581,7 +581,7 @@ export async function updateMenuItemName(
     console.error('Failed to update menu item name:', updateError);
     throw new Error('更新菜名失败');
   }
-  
+
   // 5. 统一回写该组内所有轮的订单项名称（未结账期间允许）
   // 直接更新所有关联的订单项
   const { error: updateItemsError } = await client
@@ -593,13 +593,13 @@ export async function updateMenuItemName(
     })
     .eq('group_id', groupId)
     .eq('menu_item_id', menuItemId);
-  
+
   if (updateItemsError) {
     console.warn('Failed to update round items name:', updateItemsError);
     // 不抛出错误，因为菜单项名称已更新成功
     // RLS策略可能阻止更新，但菜单项本身已更新
   }
-  
+
   return {
     id: updatedMenuItem.id,
     groupId: updatedMenuItem.group_id,
@@ -1301,7 +1301,7 @@ export async function startCheckoutConfirmation(groupId: string, userId: string)
 
   // 创建Extra round（用于调整数量）
   const extraRoundId = `${groupId}_Extra`;
-  
+
   // 检查Extra round是否已存在
   const checkRoundClient = ensureSupabase();
   const { data: existingRound } = await checkRoundClient
@@ -1330,7 +1330,7 @@ export async function startCheckoutConfirmation(groupId: string, userId: string)
   const confirmClient = ensureSupabase();
   const { error } = await confirmClient
     .from('groups')
-    .update({ 
+    .update({
       checkout_confirming: true,
       member_confirmations: memberConfirmations
     })
@@ -1381,9 +1381,13 @@ export async function confirmMemberOrder(groupId: string, userId: string): Promi
 /**
  * 最终确认结账（所有成员确认后，Owner调用）
  */
-export async function finalizeCheckout(groupId: string, userId: string): Promise<void> {
+export async function finalizeCheckout(
+  groupId: string,
+  userId: string,
+  options?: { force?: boolean }
+): Promise<void> {
   const client = ensureSupabase();
-  
+
   // 检查权限
   const { data: groupData } = await client
     .from('groups')
@@ -1395,7 +1399,7 @@ export async function finalizeCheckout(groupId: string, userId: string): Promise
     throw new Error('只有管理员可以最终确认结账');
   }
 
-  if (!groupData.checkout_confirming) {
+  if (!groupData.checkout_confirming && !options?.force) {
     throw new Error('当前不在结账确认流程中');
   }
 
@@ -1403,7 +1407,7 @@ export async function finalizeCheckout(groupId: string, userId: string): Promise
   const memberConfirmations = (groupData.member_confirmations as Record<string, boolean>) || {};
   const allConfirmed = groupData.members.every((memberId: string) => memberConfirmations[memberId] === true);
 
-  if (!allConfirmed) {
+  if (!allConfirmed && !options?.force) {
     const unconfirmedMembers = groupData.members.filter(
       (memberId: string) => !memberConfirmations[memberId]
     );
@@ -1415,12 +1419,12 @@ export async function finalizeCheckout(groupId: string, userId: string): Promise
     .from('users')
     .select('id, name')
     .in('id', groupData.members);
-  
+
   const memberNameMap = new Map<string, string>();
   (membersData || []).forEach((user: any) => {
     memberNameMap.set(user.id, user.name);
   });
-  
+
   // 更新所有订单项的昵称快照
   for (const memberId of groupData.members) {
     const userName = memberNameMap.get(memberId) || memberId;
@@ -1439,7 +1443,7 @@ export async function finalizeCheckout(groupId: string, userId: string): Promise
     .select('id, name_display')
     .eq('group_id', groupId)
     .eq('status', 'active');
-  
+
   // 更新所有关联订单项的名称快照
   for (const menuItem of (menuItems || [])) {
     await client
@@ -1462,7 +1466,7 @@ export async function finalizeCheckout(groupId: string, userId: string): Promise
   // 标记组为已结账
   const { error } = await client
     .from('groups')
-    .update({ 
+    .update({
       settled: true,
       checkout_confirming: false
     })
@@ -1570,7 +1574,7 @@ export async function saveGroupAsRestaurantMenu(
   // 3. 创建新的 RestaurantMenu
   const now = new Date().toISOString();
   const restaurantMenuId = 'rm_' + generateShortId();
-  
+
   const { error: menuError } = await client
     .from('restaurant_menus')
     .insert([{
@@ -1673,7 +1677,7 @@ export async function saveGroupAsRestaurantMenu(
         .from('restaurant_menu_items')
         .delete()
         .eq('restaurant_menu_id', oldestLink.restaurant_menu_id);
-      
+
       await client
         .from('restaurant_menus')
         .delete()
@@ -1877,7 +1881,7 @@ export async function importRestaurantMenuToGroup(
   for (const menuItem of menuItemsToImport) {
     // 检查是否冲突（同名不同价）
     const conflict = currentMenu?.find(
-      item => 
+      item =>
         item.name_display.trim() === menuItem.name_display.trim() &&
         item.price !== menuItem.price &&
         item.status === 'active'

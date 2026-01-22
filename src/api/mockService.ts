@@ -4,11 +4,11 @@
  * 后续可替换为真实的Supabase/Firebase/REST API
  */
 
-import { 
-  User, 
-  Group, 
-  GroupMenuItem, 
-  Round, 
+import {
+  User,
+  Group,
+  GroupMenuItem,
+  Round,
   RoundItem,
   GroupBill,
   UserBill,
@@ -17,11 +17,11 @@ import {
   RestaurantMenuItem,
   UserRestaurantMenuLink
 } from '@/types';
-import { 
-  mockUsers, 
-  mockGroup, 
-  mockMenu, 
-  mockRounds, 
+import {
+  mockUsers,
+  mockGroup,
+  mockMenu,
+  mockRounds,
   mockRoundItems
 } from './mockData';
 import { generateShortId, generateUniqueId } from '@/utils/format';
@@ -110,11 +110,11 @@ const delay = (ms: number = 300) => new Promise(resolve => setTimeout(resolve, m
  */
 export async function createGroup(ownerName: string): Promise<{ group: Group; user: User }> {
   await delay();
-  
+
   // 检查 localStorage 中是否已有用户ID，如果有就复用（保持用户身份一致）
   let userId = localStorage.getItem('ordered_user_id');
   let user: User | undefined;
-  
+
   if (userId) {
     // 尝试从现有用户列表中找到该用户
     user = users.find(u => u.id === userId);
@@ -168,7 +168,7 @@ export async function createGroup(ownerName: string): Promise<{ group: Group; us
  */
 export async function joinGroup(groupId: string, userName: string): Promise<{ group: Group; user: User }> {
   await delay();
-  
+
   const group = groups.find(g => g.id === groupId);
   if (!group) {
     throw new Error('组不存在');
@@ -201,7 +201,7 @@ export async function getGroup(groupId: string): Promise<{
   currentRound?: Round;
 }> {
   await delay();
-  
+
   const group = groups.find(g => g.id === groupId);
   if (!group) {
     throw new Error('组不存在');
@@ -226,23 +226,23 @@ export async function getMenu(groupId: string): Promise<GroupMenuItem[]> {
  */
 export async function addMenuItem(item: Omit<GroupMenuItem, 'id' | 'createdAt'>): Promise<GroupMenuItem> {
   await delay();
-  
+
   const normalizedName = normalizeDishName(item.nameDisplay);
-  
+
   // 检查同组内是否已存在同名active菜品
   const existingItem = menus.find(
     m => m.groupId === item.groupId &&
-         m.status === 'active' &&
-         normalizeDishName(m.nameDisplay).toLowerCase() === normalizedName.toLowerCase()
+      m.status === 'active' &&
+      normalizeDishName(m.nameDisplay).toLowerCase() === normalizedName.toLowerCase()
   );
-  
+
   if (existingItem) {
     const error: any = new Error('菜名已存在');
     error.status = 409;
     error.existingItem = existingItem;
     throw error;
   }
-  
+
   const newItem: GroupMenuItem = {
     ...item,
     nameDisplay: normalizedName,
@@ -257,11 +257,11 @@ export async function addMenuItem(item: Omit<GroupMenuItem, 'id' | 'createdAt'>)
  * 更新菜单项（价格、状态等，不包括名称）
  */
 export async function updateMenuItem(
-  itemId: string, 
+  itemId: string,
   updates: Partial<GroupMenuItem>
 ): Promise<GroupMenuItem> {
   await delay();
-  
+
   const index = menus.findIndex(m => m.id === itemId);
   if (index === -1) {
     throw new Error('菜单项不存在');
@@ -286,43 +286,43 @@ export async function updateMenuItemName(
   userId: string
 ): Promise<GroupMenuItem> {
   await delay();
-  
+
   // 1. 校验组是否已结账
   const group = groups.find(g => g.id === groupId);
   if (!group) {
     throw new Error('组不存在');
   }
-  
+
   if (group.settled) {
     const error: any = new Error('该桌已结账，无法修改菜名');
     error.status = 403;
     throw error;
   }
-  
+
   // 2. 规范化新名称
   const normalizedName = normalizeDishName(newName);
-  
+
   // 3. 检查冲突：同组内是否已有active的新名称（排除自己）
   const conflictItem = menus.find(
     m => m.groupId === groupId &&
-         m.status === 'active' &&
-         m.id !== menuItemId &&
-         normalizeDishName(m.nameDisplay).toLowerCase() === normalizedName.toLowerCase()
+      m.status === 'active' &&
+      m.id !== menuItemId &&
+      normalizeDishName(m.nameDisplay).toLowerCase() === normalizedName.toLowerCase()
   );
-  
+
   if (conflictItem) {
     const error: any = new Error('菜名已存在，请重新命名');
     error.status = 409;
     error.existingItem = conflictItem;
     throw error;
   }
-  
+
   // 4. 更新菜单项名称
   const menuIndex = menus.findIndex(m => m.id === menuItemId);
   if (menuIndex === -1) {
     throw new Error('菜单项不存在');
   }
-  
+
   const now = new Date().toISOString();
   menus[menuIndex] = {
     ...menus[menuIndex],
@@ -330,15 +330,15 @@ export async function updateMenuItemName(
     updatedAt: now,
     updatedBy: userId
   };
-  
+
   // 5. 统一回写该组内所有轮的订单项名称（未结账期间允许）
   const updatedMenuItem = menus[menuIndex];
   roundItems.forEach(item => {
     if (item.groupId === groupId && !item.deleted) {
       // 如果订单项关联了该菜单项（通过menuItemId或名称+价格匹配），更新名称
-      if (item.menuItemId === menuItemId || 
-          (item.nameDisplay === updatedMenuItem.nameDisplay && 
-           item.price === updatedMenuItem.price)) {
+      if (item.menuItemId === menuItemId ||
+        (item.nameDisplay === updatedMenuItem.nameDisplay &&
+          item.price === updatedMenuItem.price)) {
         item.nameDisplay = normalizedName;
         item.updatedAt = now;
         item.updatedBy = userId;
@@ -349,7 +349,7 @@ export async function updateMenuItemName(
       }
     }
   });
-  
+
   return menus[menuIndex];
 }
 
@@ -372,7 +372,7 @@ export async function createRound(
   options?: { allowMember?: boolean }
 ): Promise<Round> {
   await delay();
-  
+
   const group = groups.find(g => g.id === groupId);
   if (!group) {
     throw new Error('组不存在');
@@ -415,7 +415,7 @@ export async function closeRound(
   options?: { allowMember?: boolean }
 ): Promise<Round> {
   await delay();
-  
+
   const round = rounds.find(r => r.id === roundId);
   if (!round) {
     throw new Error('轮次不存在');
@@ -458,7 +458,7 @@ export async function getRoundItems(roundId: string): Promise<RoundItem[]> {
  */
 export async function addRoundItem(item: Omit<RoundItem, 'id' | 'createdAt'>): Promise<RoundItem> {
   await delay();
-  
+
   const round = rounds.find(r => r.id === item.roundId);
   if (!round) {
     throw new Error('轮次不存在');
@@ -471,9 +471,9 @@ export async function addRoundItem(item: Omit<RoundItem, 'id' | 'createdAt'>): P
   // 尝试找到对应的菜单项（通过名称和价格匹配）
   const matchingMenuItem = menus.find(
     m => m.groupId === item.groupId &&
-         m.status === 'active' &&
-         normalizeDishName(m.nameDisplay).toLowerCase() === normalizeDishName(item.nameDisplay).toLowerCase() &&
-         m.price === item.price
+      m.status === 'active' &&
+      normalizeDishName(m.nameDisplay).toLowerCase() === normalizeDishName(item.nameDisplay).toLowerCase() &&
+      m.price === item.price
   );
 
   const newItem: RoundItem = {
@@ -496,14 +496,14 @@ export async function updateRoundItem(
   updates: Partial<RoundItem>
 ): Promise<RoundItem> {
   await delay();
-  
+
   const index = roundItems.findIndex(item => item.id === itemId);
   if (index === -1) {
     throw new Error('订单项不存在');
   }
 
   const item = roundItems[index];
-  
+
   // 检查权限：只能修改自己的订单，或者是管理员
   const group = groups.find(g => g.id === item.groupId);
   if (item.userId !== userId && group?.ownerId !== userId) {
@@ -524,7 +524,7 @@ export async function updateRoundItem(
  */
 export async function deleteRoundItem(itemId: string, userId: string): Promise<void> {
   await delay();
-  
+
   const item = roundItems.find(item => item.id === itemId);
   if (!item) {
     throw new Error('订单项不存在');
@@ -545,7 +545,7 @@ export async function deleteRoundItem(itemId: string, userId: string): Promise<v
  */
 export async function settleGroup(groupId: string, userId: string): Promise<void> {
   await delay();
-  
+
   const group = groups.find(g => g.id === groupId);
   if (!group) {
     throw new Error('组不存在');
@@ -559,7 +559,7 @@ export async function settleGroup(groupId: string, userId: string): Promise<void
   group.members.forEach(memberId => {
     const user = users.find(u => u.id === memberId);
     const userName = user?.name || memberId;
-    
+
     // 更新该成员所有订单项的昵称快照
     roundItems.forEach(item => {
       if (item.groupId === groupId && item.userId === memberId && !item.userNameSnapshot) {
@@ -572,9 +572,9 @@ export async function settleGroup(groupId: string, userId: string): Promise<void
   const groupMenuItems = menus.filter(m => m.groupId === groupId && m.status === 'active');
   groupMenuItems.forEach(menuItem => {
     roundItems.forEach(item => {
-      if (item.groupId === groupId && 
-          item.menuItemId === menuItem.id &&
-          item.nameDisplay !== menuItem.nameDisplay) {
+      if (item.groupId === groupId &&
+        item.menuItemId === menuItem.id &&
+        item.nameDisplay !== menuItem.nameDisplay) {
         item.nameDisplay = menuItem.nameDisplay;
       }
     });
@@ -596,7 +596,7 @@ export async function settleGroup(groupId: string, userId: string): Promise<void
  */
 export async function getUserBill(groupId: string, userId: string): Promise<UserBill> {
   await delay();
-  
+
   const user = users.find(u => u.id === userId);
   if (!user) {
     throw new Error('用户不存在');
@@ -654,14 +654,14 @@ export async function getUserBill(groupId: string, userId: string): Promise<User
  */
 export async function getGroupBill(groupId: string): Promise<GroupBill> {
   await delay();
-  
+
   const groupRounds = rounds.filter(r => r.groupId === groupId);
   const allItems = roundItems.filter(item => item.groupId === groupId && !item.deleted);
 
   const roundSummaries: RoundSummary[] = groupRounds.map(round => {
     const items = allItems.filter(item => item.roundId === round.id);
     const aggregated = aggregateItemsByName(items);
-    
+
     return {
       roundId: round.id,
       items,
@@ -708,7 +708,7 @@ export async function getUsers(userIds: string[]): Promise<User[]> {
  */
 export async function startCheckoutConfirmation(groupId: string, userId: string): Promise<void> {
   await delay();
-  
+
   const group = groups.find(g => g.id === groupId);
   if (!group || group.ownerId !== userId) {
     throw new Error('只有管理员可以结账');
@@ -741,7 +741,7 @@ export async function startCheckoutConfirmation(groupId: string, userId: string)
  */
 export async function confirmMemberOrder(groupId: string, userId: string): Promise<void> {
   await delay();
-  
+
   const group = groups.find(g => g.id === groupId);
   if (!group || !group.checkoutConfirming) {
     throw new Error('当前不在结账确认流程中');
@@ -755,15 +755,19 @@ export async function confirmMemberOrder(groupId: string, userId: string): Promi
 /**
  * 最终确认结账（所有成员确认后，Owner调用）
  */
-export async function finalizeCheckout(groupId: string, userId: string): Promise<void> {
+export async function finalizeCheckout(
+  groupId: string,
+  userId: string,
+  options?: { force?: boolean }
+): Promise<void> {
   await delay();
-  
+
   const group = groups.find(g => g.id === groupId);
   if (!group || group.ownerId !== userId) {
     throw new Error('只有管理员可以最终确认结账');
   }
 
-  if (!group.checkoutConfirming) {
+  if (!group.checkoutConfirming && !options?.force) {
     throw new Error('当前不在结账确认流程中');
   }
 
@@ -771,7 +775,7 @@ export async function finalizeCheckout(groupId: string, userId: string): Promise
   const memberConfirmations = group.memberConfirmations || {};
   const allConfirmed = group.members.every(memberId => memberConfirmations[memberId] === true);
 
-  if (!allConfirmed) {
+  if (!allConfirmed && !options?.force) {
     const unconfirmedMembers = group.members.filter(memberId => !memberConfirmations[memberId]);
     throw new Error(`还有 ${unconfirmedMembers.length} 位成员未确认订单`);
   }
@@ -844,7 +848,7 @@ export async function removeMember(
   memberIdToRemove: string
 ): Promise<void> {
   await delay();
-  
+
   const group = groups.find(g => g.id === groupId);
   if (!group || group.ownerId !== ownerId) {
     throw new Error('只有管理员可以删除成员');
@@ -894,7 +898,7 @@ export async function saveGroupAsRestaurantMenu(
   displayName: string
 ): Promise<void> {
   await delay();
-  
+
   const group = groups.find(g => g.id === groupId);
   if (!group) {
     throw new Error('组不存在');
@@ -944,7 +948,7 @@ export async function saveGroupAsRestaurantMenu(
 
   // 5. 建立 UserRestaurantMenuLink，带上"最多 2 个 + LRU"逻辑
   const userLinks = userRestaurantMenuLinks.filter(link => link.userId === userId);
-  
+
   if (userLinks.length < 2) {
     // 直接插入新 link
     const newLink: UserRestaurantMenuLink = {
@@ -1020,7 +1024,7 @@ function cleanupOrphanMenus(): void {
       rmi => rmi.restaurantMenuId !== orphan.id
     );
   });
-  
+
   // 保存到 localStorage
   saveRestaurantMenusToStorage(restaurantMenus);
   saveRestaurantMenuItemsToStorage(restaurantMenuItems);
@@ -1037,7 +1041,7 @@ export async function getUserRestaurantMenus(
   items: RestaurantMenuItem[];
 }>> {
   await delay();
-  
+
   // 找到该用户的所有 link
   const userLinks = userRestaurantMenuLinks.filter(link => link.userId === userId);
 
@@ -1073,7 +1077,7 @@ export async function importRestaurantMenuToGroup(
   conflicts: Array<{ nameDisplay: string; price: number; note?: string }>;
 }> {
   await delay();
-  
+
   const group = groups.find(g => g.id === groupId);
   if (!group) {
     throw new Error('组不存在');
@@ -1098,7 +1102,7 @@ export async function importRestaurantMenuToGroup(
   for (const menuItem of menuItemsToImport) {
     // 检查是否冲突（同名不同价）
     const conflict = currentMenu.find(
-      item => 
+      item =>
         item.nameDisplay.trim() === menuItem.nameDisplay.trim() &&
         item.price !== menuItem.price &&
         item.status === 'active'

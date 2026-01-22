@@ -47,7 +47,6 @@ export const GroupHome: React.FC = () => {
     removeParticipantFromSharedItem,
     lockRoundItem,
     createNewRound,
-    startCheckoutConfirmation,
     confirmMemberOrder,
     finalizeCheckout,
     removeMember,
@@ -164,13 +163,11 @@ export const GroupHome: React.FC = () => {
 
   const isOwner = currentUser?.id === currentGroup?.ownerId;
   const isCreatingRound = !!actionLoading.createNewRound;
-  const isStartingCheckout = !!actionLoading.startCheckoutConfirmation;
   const isFinalizingCheckout = !!actionLoading.finalizeCheckout;
   const isClosingRound = !!actionLoading.closeCurrentRound;
   const isConfirmingRound = !!actionLoading.confirmRound;
 
   const startNewRoundGuardRef = React.useRef(false);
-  const startCheckoutGuardRef = React.useRef(false);
 
   const ownerHintKey = currentGroup ? `owner_summary_hint_${currentGroup.id}` : '';
   const [showOwnerHint, setShowOwnerHint] = useState(() => {
@@ -351,22 +348,7 @@ export const GroupHome: React.FC = () => {
   }, [currentGroup?.checkoutConfirming, currentGroup?.memberConfirmations, currentUser]);
 
   // Owner开始结账确认流程
-  const handleStartCheckout = async () => {
-    if (startCheckoutGuardRef.current) return;
-    startCheckoutGuardRef.current = true;
-    if (!window.confirm(t('home.checkoutStartConfirm'))) {
-      startCheckoutGuardRef.current = false;
-      return;
-    }
 
-    try {
-      await startCheckoutConfirmation();
-    } catch (error) {
-      alert((error as Error).message);
-    } finally {
-      startCheckoutGuardRef.current = false;
-    }
-  };
 
   // Force start next round (for any member, if all confirmed)
   const handleForceNextRound = async () => {
@@ -392,29 +374,7 @@ export const GroupHome: React.FC = () => {
   };
 
   // Owner finalized checkout
-  const handleFinalizeCheckout = async () => {
-    try {
-      await finalizeCheckout();
-      alert(t('home.checkoutFinalizeDone'));
 
-      // Reload group data
-      if (currentGroup) {
-        await loadGroup(currentGroup.id);
-      }
-
-      // 显示保存菜单弹窗（只显示一次，使用 localStorage 记录）
-      if (currentGroup && currentUser) {
-        const saveMenuKey = `save_menu_${currentGroup.id}_${currentUser.id}`;
-        const hasShown = localStorage.getItem(saveMenuKey);
-        if (!hasShown) {
-          setShowSaveMenuModal(true);
-          localStorage.setItem(saveMenuKey, 'true');
-        }
-      }
-    } catch (error) {
-      alert((error as Error).message);
-    }
-  };
 
   // 成员确认订单
   const handleConfirmOrder = async () => {
@@ -600,7 +560,7 @@ export const GroupHome: React.FC = () => {
                   <button
                     onClick={handleStartNewRound}
                     className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center justify-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                    disabled={isCreatingRound || isClosingRound || isStartingCheckout || isFinalizingCheckout}
+                    disabled={isCreatingRound || isClosingRound || isFinalizingCheckout}
                   >
                     <PlayCircle size={20} />
                     <span>{isCreatingRound ? t('home.startNewRoundLoading') : t('home.startNewRound')}</span>
@@ -608,27 +568,52 @@ export const GroupHome: React.FC = () => {
                 )}
 
                 {!currentGroup.settled && (
-                  <>
-                    {currentGroup.checkoutConfirming ? (
-                      <button
-                        onClick={handleFinalizeCheckout}
-                        className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center justify-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                        disabled={isFinalizingCheckout || isStartingCheckout || isCreatingRound || isClosingRound}
-                      >
-                        <CheckCircle size={20} />
-                        <span>{isFinalizingCheckout ? t('home.checkoutFinalizing') : t('home.checkoutFinalize')}</span>
-                      </button>
-                    ) : (
-                      <button
-                        onClick={handleStartCheckout}
-                        className="w-full py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium flex items-center justify-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                        disabled={isStartingCheckout || isFinalizingCheckout || isCreatingRound || isClosingRound}
-                      >
-                        <CheckCircle size={20} />
-                        <span>{isStartingCheckout ? t('home.checkoutStarting') : t('home.checkoutStart')}</span>
-                      </button>
-                    )}
-                  </>
+                  <button
+                    onClick={async () => {
+                      // Calculate pending confirmations
+                      const pendingMembers = members.filter(
+                        (m) => !currentGroup.memberConfirmations?.[m.id]
+                      );
+                      const pendingCount = pendingMembers.length;
+
+                      let shouldProceed = false;
+                      let isForce = false;
+
+                      if (pendingCount > 0) {
+                        if (window.confirm(t('home.forceCheckoutConfirm', { count: pendingCount }))) {
+                          shouldProceed = true;
+                          isForce = true;
+                        }
+                      } else {
+                        if (window.confirm(t('home.checkoutStartConfirm'))) {
+                          shouldProceed = true;
+                        }
+                      }
+
+                      if (shouldProceed) {
+                        try {
+                          await finalizeCheckout({ force: isForce });
+                          alert(t('home.checkoutFinalizeDone'));
+                          if (currentGroup) {
+                            await loadGroup(currentGroup.id);
+                          }
+                          // Show save menu modal if first time
+                          const saveMenuKey = `save_menu_${currentGroup.id}_${currentUser.id}`;
+                          if (!localStorage.getItem(saveMenuKey)) {
+                            setShowSaveMenuModal(true);
+                            localStorage.setItem(saveMenuKey, 'true');
+                          }
+                        } catch (e) {
+                          alert((e as Error).message);
+                        }
+                      }
+                    }}
+                    className="w-full py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium flex items-center justify-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                    disabled={isFinalizingCheckout || isCreatingRound || isClosingRound}
+                  >
+                    <CheckCircle size={20} />
+                    <span>{isFinalizingCheckout ? t('home.checkoutFinalizing') : t('home.checkoutFinalize')}</span>
+                  </button>
                 )}
               </div>
             )}
