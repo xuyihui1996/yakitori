@@ -1,4 +1,4 @@
-# Ordered - 多人点单应用
+# Ordered - 多人点单应用 ([ordered-five.vercel.app](https://ordered-five.vercel.app))
 
 一个面向顾客的、支持多人实时点单、多轮下单、按人汇总的 Web/PWA 应用。
 
