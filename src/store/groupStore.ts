@@ -48,7 +48,7 @@ interface GroupState {
 
   // Actions
   setCurrentUser: (user: User) => void;
-  createGroup: (ownerName: string) => Promise<{ group: Group; user: User }>;
+  createGroup: (ownerName: string, tableNo?: string) => Promise<{ group: Group; user: User }>;
   joinGroup: (groupId: string, userName: string) => Promise<void>;
   loadGroup: (groupId: string) => Promise<void>;
   loadMenu: () => Promise<void>;
@@ -99,6 +99,14 @@ interface GroupState {
   finalizeCheckout: (options?: { force?: boolean }) => Promise<void>;
   settleGroup: () => Promise<void>;
 
+  // Merchant View
+  groups: Group[];
+  allRounds: Round[];
+  loadAllGroups: () => Promise<void>;
+  loadAllRounds: () => Promise<void>;
+  reviewRound: (roundId: string, action: 'confirm' | 'reject') => Promise<void>;
+  settleGroupById: (groupId: string) => Promise<void>;
+
   // 成员管理
   removeMember: (memberId: string) => Promise<void>;
 
@@ -136,10 +144,55 @@ export const useGroupStore = create<GroupState>((set, get) => ({
     set({ currentUser: user });
   },
 
-  createGroup: async (ownerName: string) => {
+  groups: [],
+  allRounds: [],
+
+  loadAllGroups: async () => {
     set({ loading: true, error: null });
     try {
-      const { group, user } = await api.createGroup(ownerName);
+      const groups = await api.loadAllGroups();
+      set({ groups, loading: false });
+    } catch (error) {
+      console.error('Failed to load all groups', error);
+      set({ error: (error as Error).message, loading: false });
+    }
+  },
+
+  loadAllRounds: async () => {
+    try {
+      const allRounds = await api.loadAllRounds();
+      set({ allRounds });
+    } catch (error) {
+      console.error('Failed to load all rounds', error);
+    }
+  },
+
+  reviewRound: async (roundId: string, action: 'confirm' | 'reject') => {
+    try {
+      await api.reviewRound(roundId, action);
+      // Refresh
+      await get().loadAllRounds();
+      await get().loadAllGroups();
+    } catch (error) {
+      console.error('Failed to review round', error);
+      throw error;
+    }
+  },
+
+  settleGroupById: async (groupId: string) => {
+    try {
+      await api.settleGroupById(groupId);
+      await get().loadAllGroups();
+    } catch (error) {
+      console.error('Failed to settle group', error);
+      throw error; // Let UI handle error
+    }
+  },
+
+  createGroup: async (ownerName: string, tableNo?: string) => {
+    set({ loading: true, error: null });
+    try {
+      const { group, user } = await api.createGroup(ownerName, tableNo);
       localStorage.setItem('ordered_user_id', user.id);
       localStorage.setItem('ordered_group_id', group.id);
 

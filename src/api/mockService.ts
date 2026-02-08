@@ -108,7 +108,16 @@ const delay = (ms: number = 300) => new Promise(resolve => setTimeout(resolve, m
 /**
  * 创建新组
  */
-export async function createGroup(ownerName: string): Promise<{ group: Group; user: User }> {
+// Merchant: Load all active groups
+export async function loadAllGroups(): Promise<Group[]> {
+  await delay(500);
+  return groups.filter(g => !g.settled);
+}
+
+/**
+ * 创建新组
+ */
+export async function createGroup(ownerName: string, tableNo?: string): Promise<{ group: Group; user: User }> {
   await delay();
 
   // 检查 localStorage 中是否已有用户ID，如果有就复用（保持用户身份一致）
@@ -142,6 +151,7 @@ export async function createGroup(ownerName: string): Promise<{ group: Group; us
   const now = new Date().toISOString();
   const group: Group = {
     id: 'G' + generateShortId(),
+    tableNo,
     ownerId: userId,
     createdAt: now,
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
@@ -161,6 +171,37 @@ export async function createGroup(ownerName: string): Promise<{ group: Group; us
   rounds.push(firstRound);
 
   return { group, user };
+}
+
+// Merchant: Load all rounds
+export async function loadAllRounds(): Promise<Round[]> {
+  await delay(500);
+  return rounds;
+}
+
+// Merchant: Review round
+export async function reviewRound(roundId: string, action: 'confirm' | 'reject'): Promise<void> {
+  await delay();
+  const round = rounds.find(r => r.id === roundId);
+  if (!round) throw new Error('Round not found');
+
+  round.reviewStatus = action === 'confirm' ? 'confirmed' : 'rejected';
+
+  if (action === 'confirm') {
+    round.status = 'closed'; // Close the round upon confirmation if desired, or keep open but confirmed? 
+    // Requirement "Merchant receive pop up that customer order current round."
+    // Usually confirming closes it or moves to preparation. Let's assume it confirms the order placement.
+    round.merchantConfirmedAt = new Date().toISOString();
+  }
+}
+
+// Merchant: Settle group by ID
+export async function settleGroupById(groupId: string): Promise<void> {
+  await delay(500);
+  const group = groups.find(g => g.id === groupId);
+  if (group) {
+    group.settled = true;
+  }
 }
 
 /**

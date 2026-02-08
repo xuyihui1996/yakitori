@@ -13,6 +13,7 @@ export interface User {
 // 组 / 桌
 export interface Group {
   id: string;              // 比如 G12345
+  tableNo?: string;        // 桌号 (1, 2, 3...)
   ownerId: string;         // 创建人
   createdAt: string;
   expiresAt: string;       // 1周后
@@ -41,10 +42,12 @@ export interface Round {
   id: string;              // R1, R2 ...
   groupId: string;
   status: 'open' | 'closed';
+  reviewStatus?: 'pending' | 'confirmed' | 'rejected'; // 商家审核状态
   createdBy: string;
   createdAt: string;
   closedAt?: string;
-   memberConfirmations?: Record<string, boolean>;
+  merchantConfirmedAt?: string;
+  memberConfirmations?: Record<string, boolean>;
 }
 
 // 某一轮里的具体点单记录

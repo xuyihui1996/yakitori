@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Plus, Users } from 'lucide-react';
 import { MerchantMenuItem } from '@/data/merchantMenu';
 import { useI18n } from '@/i18n';
+import { useMerchantStore } from '@/store/merchantStore';
 
 interface Props {
   items: MerchantMenuItem[];
@@ -12,6 +13,7 @@ interface Props {
 
 export const MerchantMenu: React.FC<Props> = ({ items, onAdd, onShare, disabled }) => {
   const { locale, t } = useI18n();
+  const { isSoldOut } = useMerchantStore();
   const categories = useMemo(
     () => Array.from(new Set(items.map((it) => it.category))),
     [items]
@@ -40,32 +42,7 @@ export const MerchantMenu: React.FC<Props> = ({ items, onAdd, onShare, disabled 
       // Sticky header offset (approx 80px for header + some padding)
       const offset = 100;
 
-      let closest = activeCategory;
-      let minDistance = Infinity;
-
-      for (const cat of categories) {
-        const el = document.getElementById(`category-${cat}`);
-        if (!el) {
-          continue;
-        }
-
-        const rect = el.getBoundingClientRect();
-        // Distance of the element's top to the target offset
-        const distance = Math.abs(rect.top - offset);
-
-        // Check if the section is currently active (top is above offset, bottom is below offset)
-        if (rect.top <= offset && rect.bottom > offset) {
-          closest = cat;
-          minDistance = 0; // Found exact match
-          break;
-        }
-
-        // Fallback: find closest one if none match exact (rare but safe)
-        if (rect.top > offset && distance < minDistance) {
-          // This logic prefers upcoming sections, might not be ideal.
-          // Better logic: Last section that passed the threshold.
-        }
-      }
+      // ... (rest of scroll spy logic) ...
 
       // Improved logic: find the last category whose top is <= offset
       let active = categories[0];
@@ -79,17 +56,11 @@ export const MerchantMenu: React.FC<Props> = ({ items, onAdd, onShare, disabled 
           break; // Since they are ordered, once we find one below, we stop
         }
       }
-      closest = active;
+      const closest = active;
 
       if (closest && closest !== activeCategory) {
         setActiveCategory(closest);
-        // Also scroll sidebar processing
         const sidebarEl = document.getElementById(`sidebar-cat-${closest}`);
-        // Only scroll sidebar if it's not visible? Or always center it?
-        // Since sidebar is sticky, we might not need to scroll it much if it fits?
-        // But if sidebar is long (scrollable within sticky), we might need it.
-        // Let's keep it simple: just set active state. 
-        // If sidebar overflows screen height, we might need to scroll it.
         sidebarEl?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
       }
     };
@@ -104,7 +75,6 @@ export const MerchantMenu: React.FC<Props> = ({ items, onAdd, onShare, disabled 
     if (el) {
       isScrollingRef.current = true;
       const navHeight = 80; // Header height
-      // Use window scrollTo
       const y = el.getBoundingClientRect().top + window.scrollY - navHeight;
       window.scrollTo({ top: y, behavior: 'smooth' });
 
@@ -153,64 +123,97 @@ export const MerchantMenu: React.FC<Props> = ({ items, onAdd, onShare, disabled 
               </div>
 
               <div className="grid grid-cols-1 gap-4">
-                {groupedItems[cat]?.map((item) => (
-                  <div
-                    key={item.nameJa}
-                    className="premium-card p-4 flex gap-4 premium-shadow hover-lift bg-white relative group border border-slate-100/60"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="font-bold text-slate-800 text-base leading-tight">
-                            {locale === 'zh' ? item.nameZh : item.nameJa}
-                          </h4>
-                          <p className="text-xs text-slate-400 mt-1 font-medium">
-                            {locale === 'zh' ? item.nameJa : item.nameZh}
-                          </p>
+                {groupedItems[cat]?.map((item) => {
+                  const isItemSoldOut = isSoldOut(item.nameJa);
+
+                  return (
+                    <div
+                      key={item.nameJa}
+                      className={`premium-card p-4 flex gap-4 premium-shadow hover-lift bg-white relative group border border-slate-100/60 ${isItemSoldOut ? 'opacity-60 grayscale' : ''}`}
+                    >
+                      {isItemSoldOut && (
+                        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+                          <span className="bg-gray-800/80 text-white px-4 py-1 rounded-full text-sm font-bold transform -rotate-12 backdrop-blur-sm">
+                            Sold Out
+                          </span>
                         </div>
-                        <div className="text-primary-600 font-bold text-lg tabular-nums">
-                          {item.priceYen ? `¥${item.priceYen}` : '-'}
+                      )}
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-bold text-slate-800 text-base leading-tight">
+                              {locale === 'zh' ? item.nameZh : item.nameJa}
+                            </h4>
+                            <p className="text-xs text-slate-400 mt-1 font-medium">
+                              {locale === 'zh' ? item.nameJa : item.nameZh}
+                            </p>
+                          </div>
+                          <div className="text-primary-600 font-bold text-lg tabular-nums">
+                            {item.priceYen ? `¥${item.priceYen}` : '-'}
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="mt-4 flex items-center justify-between">
-                        {!item.priceYen && (
-                          <div className="relative w-24">
-                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-xs">¥</span>
-                            <input
-                              type="number"
-                              placeholder="0"
-                              className="w-full bg-slate-50 border border-slate-200 rounded-lg py-1.5 pl-6 pr-2 text-sm font-semibold focus:ring-2 focus:ring-primary-100 focus:border-primary-400 transition-all outline-none"
-                              value={priceInputs[item.nameJa] || ''}
-                              onChange={(e) => setPriceInputs(prev => ({ ...prev, [item.nameJa]: e.target.value }))}
-                            />
-                          </div>
-                        )}
+                        <div className="mt-4 flex items-center justify-between">
+                          {!item.priceYen && (
+                            <div className="relative w-24">
+                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-xs">¥</span>
+                              <input
+                                type="number"
+                                placeholder="0"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-lg py-1.5 pl-6 pr-2 text-sm font-semibold focus:ring-2 focus:ring-primary-100 focus:border-primary-400 transition-all outline-none"
+                                value={priceInputs[item.nameJa] || ''}
+                                onChange={(e) => setPriceInputs(prev => ({ ...prev, [item.nameJa]: e.target.value }))}
+                                disabled={isItemSoldOut}
+                              />
+                            </div>
+                          )}
 
-                        <div className="flex items-center gap-3 ml-auto">
-                          {/* Quantity Selector */}
-                          <div className="flex items-center bg-slate-100 rounded-lg p-1">
-                            <button
-                              onClick={() => setQtyInputs(prev => ({ ...prev, [item.nameJa]: Math.max(1, (prev[item.nameJa] || 1) - 1) }))}
-                              className="w-8 h-8 flex items-center justify-center bg-white rounded-md shadow-sm text-slate-600 hover:text-primary-600 active:scale-95 transition-all disabled:opacity-50"
-                              disabled={disabled}
-                            >
-                              <span className="text-lg font-bold mb-0.5">-</span>
-                            </button>
-                            <span className="w-10 text-center font-bold text-slate-700">
-                              {qtyInputs[item.nameJa] || 1}
-                            </span>
-                            <button
-                              onClick={() => setQtyInputs(prev => ({ ...prev, [item.nameJa]: (prev[item.nameJa] || 1) + 1 }))}
-                              className="w-8 h-8 flex items-center justify-center bg-white rounded-md shadow-sm text-slate-600 hover:text-primary-600 active:scale-95 transition-all disabled:opacity-50"
-                              disabled={disabled}
-                            >
-                              <Plus size={16} strokeWidth={3} />
-                            </button>
-                          </div>
+                          <div className="flex items-center gap-3 ml-auto">
+                            {/* Quantity Selector */}
+                            <div className="flex items-center bg-slate-100 rounded-lg p-1">
+                              <button
+                                onClick={() => setQtyInputs(prev => ({ ...prev, [item.nameJa]: Math.max(1, (prev[item.nameJa] || 1) - 1) }))}
+                                className="w-8 h-8 flex items-center justify-center bg-white rounded-md shadow-sm text-slate-600 hover:text-primary-600 active:scale-95 transition-all disabled:opacity-50"
+                                disabled={disabled || isItemSoldOut}
+                              >
+                                <span className="text-lg font-bold mb-0.5">-</span>
+                              </button>
+                              <span className="w-10 text-center font-bold text-slate-700">
+                                {qtyInputs[item.nameJa] || 1}
+                              </span>
+                              <button
+                                onClick={() => setQtyInputs(prev => ({ ...prev, [item.nameJa]: (prev[item.nameJa] || 1) + 1 }))}
+                                className="w-8 h-8 flex items-center justify-center bg-white rounded-md shadow-sm text-slate-600 hover:text-primary-600 active:scale-95 transition-all disabled:opacity-50"
+                                disabled={disabled || isItemSoldOut}
+                              >
+                                <Plus size={16} strokeWidth={3} />
+                              </button>
+                            </div>
 
-                          <div className="flex items-center gap-2">
-                            {onShare && (
+                            <div className="flex items-center gap-2">
+                              {onShare && (
+                                <button
+                                  onClick={() => {
+                                    const price = item.priceYen ?? parseInt(priceInputs[item.nameJa] || '0');
+                                    if (!price) return;
+
+                                    const qty = qtyInputs[item.nameJa] || 1;
+
+                                    onShare({
+                                      nameDisplay: locale === 'zh' ? item.nameZh : item.nameJa,
+                                      price,
+                                      qty
+                                    });
+                                  }}
+                                  disabled={disabled || (!item.priceYen && !priceInputs[item.nameJa]) || isItemSoldOut}
+                                  className="w-10 h-10 flex items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                  title={t('home.newShared')}
+                                >
+                                  <Users size={18} />
+                                </button>
+                              )}
+
                               <button
                                 onClick={() => {
                                   const price = item.priceYen ?? parseInt(priceInputs[item.nameJa] || '0');
@@ -218,52 +221,32 @@ export const MerchantMenu: React.FC<Props> = ({ items, onAdd, onShare, disabled 
 
                                   const qty = qtyInputs[item.nameJa] || 1;
 
-                                  onShare({
+                                  onAdd({
                                     nameDisplay: locale === 'zh' ? item.nameZh : item.nameJa,
                                     price,
                                     qty
                                   });
+                                  // Reset
+                                  if (!item.priceYen) setPriceInputs(prev => ({ ...prev, [item.nameJa]: '' }));
+                                  setQtyInputs(prev => ({ ...prev, [item.nameJa]: 1 }));
                                 }}
-                                disabled={disabled || (!item.priceYen && !priceInputs[item.nameJa])}
-                                className="w-10 h-10 flex items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                title={t('home.newShared')}
+                                disabled={disabled || (!item.priceYen && !priceInputs[item.nameJa]) || isItemSoldOut}
+                                className={`
+                                    flex items-center gap-1.5 px-4 py-2 rounded-xl font-bold text-sm transition-all
+                                    ${disabled || (!item.priceYen && !priceInputs[item.nameJa]) || isItemSoldOut
+                                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                    : 'bg-primary-600 text-white shadow-lg shadow-primary-500/30 hover:bg-primary-700 active:scale-95'}
+                                  `}
                               >
-                                <Users size={18} />
+                                <span>{t('menu.add')}</span>
                               </button>
-                            )}
-
-                            <button
-                              onClick={() => {
-                                const price = item.priceYen ?? parseInt(priceInputs[item.nameJa] || '0');
-                                if (!price) return;
-
-                                const qty = qtyInputs[item.nameJa] || 1;
-
-                                onAdd({
-                                  nameDisplay: locale === 'zh' ? item.nameZh : item.nameJa,
-                                  price,
-                                  qty
-                                });
-                                // Reset
-                                if (!item.priceYen) setPriceInputs(prev => ({ ...prev, [item.nameJa]: '' }));
-                                setQtyInputs(prev => ({ ...prev, [item.nameJa]: 1 }));
-                              }}
-                              disabled={disabled || (!item.priceYen && !priceInputs[item.nameJa])}
-                              className={`
-                                  flex items-center gap-1.5 px-4 py-2 rounded-xl font-bold text-sm transition-all
-                                  ${disabled || (!item.priceYen && !priceInputs[item.nameJa])
-                                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                                  : 'bg-primary-600 text-white shadow-lg shadow-primary-500/30 hover:bg-primary-700 active:scale-95'}
-                                `}
-                            >
-                              <span>{t('menu.add')}</span>
-                            </button>
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))}

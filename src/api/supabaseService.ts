@@ -349,6 +349,35 @@ export async function getGroup(groupId: string): Promise<{
   };
 }
 
+/**
+ * 获取所有组 (Merchant)
+ */
+export async function loadAllGroups(): Promise<Group[]> {
+  const client = ensureSupabase();
+  const { data, error } = await client
+    .from('groups')
+    .select('*')
+    .eq('settled', false) // Only fetch active groups
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Failed to load all groups:', error);
+    return [];
+  }
+
+  return (data || []).map((g: any) => ({
+    id: g.id,
+    ownerId: g.owner_id,
+    createdAt: g.created_at,
+    expiresAt: g.expires_at,
+    settled: g.settled,
+    members: g.members || [],
+    tableNo: g.table_no, // Ensure tableNo is mapped if exists in DB schema, otherwise generated or ignored
+    checkoutConfirming: g.checkout_confirming || false,
+    memberConfirmations: g.member_confirmations || {},
+  })) as Group[];
+}
+
 // ============ 菜单相关 ============
 
 /**
@@ -641,6 +670,77 @@ export async function getRounds(groupId: string): Promise<Round[]> {
     closedAt: round.closed_at,
     memberConfirmations: round.member_confirmations || {},
   })) as Round[];
+}
+
+/**
+ * 获取所有轮次 (Merchant)
+ */
+export async function loadAllRounds(): Promise<Round[]> {
+  const client = ensureSupabase();
+  const { data, error } = await client
+    .from('rounds')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Failed to load all rounds:', error);
+    return [];
+  }
+
+  return (data || []).map((r: any) => ({
+    id: r.id,
+    groupId: r.group_id,
+    status: r.status,
+    reviewStatus: r.review_status || 'pending', // Default to pending if column exists
+    createdBy: r.created_by,
+    createdAt: r.created_at,
+    closedAt: r.closed_at,
+    memberConfirmations: r.member_confirmations || {},
+    merchantConfirmedAt: r.merchant_confirmed_at
+  })) as Round[];
+}
+
+/**
+ * Review round (Merchant)
+ */
+export async function reviewRound(roundId: string, action: 'confirm' | 'reject'): Promise<void> {
+  const client = ensureSupabase();
+  const updateData: any = {
+    review_status: action === 'confirm' ? 'confirmed' : 'rejected'
+  };
+
+  if (action === 'confirm') {
+    updateData.status = 'closed';
+    updateData.merchant_confirmed_at = new Date().toISOString();
+  }
+
+  const { error } = await client
+    .from('rounds')
+    .update(updateData)
+    .eq('id', roundId);
+
+  if (error) {
+    console.error('Failed to review round:', error);
+    throw new Error('Review round failed');
+  }
+}
+
+
+
+/**
+ * Merchant: Settle group by ID
+ */
+export async function settleGroupById(groupId: string): Promise<void> {
+  const client = ensureSupabase();
+  const { error } = await client
+    .from('groups')
+    .update({ settled: true })
+    .eq('id', groupId);
+
+  if (error) {
+    console.error('Failed to settle group:', error);
+    throw new Error('Settle group failed');
+  }
 }
 
 /**

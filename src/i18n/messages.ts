@@ -173,6 +173,8 @@ export const messages = {
     'menu.applyFailed': '应用改动失败：{message}',
     'home.forceStartNextRound': '开启下一轮',
     'home.forceStartNextRoundConfirm': '所有人都已确认。确定要开启下一轮吗？',
+    'home.waitingForMerchant': '等待管理员确认...',
+    'home.waitingForMerchantHint': '所有成员已确认，请等待管理员确认后开启下一轮。',
     'join.browserWarning': '请使用 Safari、Chrome 或 Edge 等浏览器打开。请勿在微信或 LINE 内直接访问，可能会导致无法登录。',
     'itemInput.title': '新增菜品',
     'itemInput.name': '菜名 *',
@@ -553,6 +555,8 @@ export const messages = {
     'owner.total': '合計',
     'owner.roundOpen': '進行中',
     'owner.roundClosed': '終了',
+    'home.waitingForMerchant': 'オーナーの確認待ち...',
+    'home.waitingForMerchantHint': '全員確認済みです。オーナーの操作をお待ちください。',
   },
 } as const satisfies Record<Locale, Record<string, string>>;
 

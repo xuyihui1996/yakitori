@@ -56,7 +56,6 @@ export const GroupHome: React.FC = () => {
     getUserRestaurantMenus,
     importRestaurantMenuToGroup,
     confirmCurrentRound,
-    closeCurrentRound,
   } = useGroupStore();
 
   const [showItemInput, setShowItemInput] = useState(false);
@@ -351,28 +350,7 @@ export const GroupHome: React.FC = () => {
   // Owner开始结账确认流程
 
 
-  // Force start next round (for any member, if all confirmed)
-  const handleForceNextRound = async () => {
-    if (startNewRoundGuardRef.current) return;
-    if (!currentGroup || !currentRound || !currentUser) return;
 
-    if (!window.confirm(t('home.forceStartNextRoundConfirm'))) {
-      return;
-    }
-
-    startNewRoundGuardRef.current = true;
-    try {
-      // 1. Close current round
-      await closeCurrentRound();
-      // 2. Start new round
-      await createNewRound();
-      alert(t('home.startNewRoundDone'));
-    } catch (error) {
-      alert((error as Error).message);
-    } finally {
-      startNewRoundGuardRef.current = false;
-    }
-  };
 
   // Owner finalized checkout
 
@@ -783,16 +761,12 @@ export const GroupHome: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Allow any user to force start next round if ALL confirmed */}
+                {/* Waiting for Merchant Status */}
                 {allConfirmed && !isConfirmingRound && (
-                  <button
-                    type="button"
-                    onClick={handleForceNextRound}
-                    className="w-full mt-3 bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 shadow-md flex items-center justify-center gap-2"
-                  >
-                    <PlayCircle size={20} />
-                    {t('home.forceStartNextRound')}
-                  </button>
+                  <div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-center animate-pulse">
+                    <p className="font-bold text-yellow-800 text-lg mb-1">{t('home.waitingForMerchant')}</p>
+                    <p className="text-sm text-yellow-700">{t('home.waitingForMerchantHint')}</p>
+                  </div>
                 )}
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
