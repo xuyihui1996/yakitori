@@ -99,7 +99,7 @@ export const MerchantDashboard: React.FC = () => {
     return (
         <div className="min-h-screen bg-gray-100 p-6">
             <header className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold text-gray-800">店舗管理画面 (Merchant)</h1>
+                <h1 className="text-2xl font-bold text-gray-800">店舗管理画面 (Merchant) <span className="text-sm font-normal text-gray-500 bg-gray-200 px-2 py-1 rounded">v1.6</span></h1>
                 <div className="flex gap-4">
                     <button
                         onClick={() => setActiveTab('tables')}
@@ -284,8 +284,8 @@ export const MerchantDashboard: React.FC = () => {
                                                                 }
                                                             }}
                                                             className={`ml-2 px-3 py-1 rounded text-xs font-bold transition-colors ${item.served
-                                                                    ? 'bg-gray-200 text-gray-500 hover:bg-gray-300'
-                                                                    : 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
+                                                                ? 'bg-gray-200 text-gray-500 hover:bg-gray-300'
+                                                                : 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
                                                                 }`}
                                                         >
                                                             {item.served ? '取消' : '出餐'}
