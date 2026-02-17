@@ -1373,6 +1373,22 @@ export async function removeMember(
 // ============ 结账相关 ============
 
 /**
+ * Toggle served status of a round item
+ */
+export async function toggleItemServed(itemId: string, served: boolean): Promise<void> {
+  const client = ensureSupabase();
+  const { error } = await client
+    .from('round_items')
+    .update({ served })
+    .eq('id', itemId);
+
+  if (error) {
+    console.error('Failed to toggle served status:', error);
+    throw new Error('Toggle served status failed');
+  }
+}
+
+/**
  * 开始结账确认流程（Owner点击结账时）
  */
 export async function startCheckoutConfirmation(groupId: string, userId: string): Promise<void> {

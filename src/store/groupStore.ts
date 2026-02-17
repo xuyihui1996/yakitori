@@ -105,6 +105,7 @@ interface GroupState {
   loadAllGroups: () => Promise<void>;
   loadAllRounds: () => Promise<void>;
   reviewRound: (roundId: string, action: 'confirm' | 'reject') => Promise<void>;
+  toggleItemServed: (itemId: string, served: boolean) => Promise<void>;
   settleGroupById: (groupId: string) => Promise<void>;
 
   // 成员管理
@@ -964,6 +965,24 @@ export const useGroupStore = create<GroupState>((set, get) => ({
     } catch (error) {
       set({ error: (error as Error).message });
       throw error;
+    }
+  },
+
+  toggleItemServed: async (itemId, served) => {
+    try {
+      // Optimistic update
+      set(state => ({
+        allRoundItems: state.allRoundItems.map(item =>
+          item.id === itemId ? { ...item, served } : item
+        )
+      }));
+
+      await api.toggleItemServed(itemId, served);
+    } catch (error) {
+      console.error('Failed to toggle served status', error);
+      // Revert optimization on error
+      // In a real app we might want to reload
+      alert('Failed to update status');
     }
   },
 

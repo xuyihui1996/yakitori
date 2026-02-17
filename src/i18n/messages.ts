@@ -3,6 +3,10 @@ export const messages = {
   zh: {
     'lang.zh': '中文',
     'lang.ja': '日本語',
+    'merchant.checkoutConfirm': '结账确认',
+    'merchant.tableNo': '桌号',
+    'merchant.cancel': '取消',
+    'merchant.checkout': '结账',
     'common.close': '关闭',
     'common.cancel': '取消',
     'common.confirm': '确定',
@@ -282,6 +286,10 @@ export const messages = {
   ja: {
     'lang.zh': '中文',
     'lang.ja': '日本語',
+    'merchant.checkoutConfirm': '会計確認',
+    'merchant.tableNo': '卓番号',
+    'merchant.cancel': 'キャンセル',
+    'merchant.checkout': '会計',
     'common.close': '閉じる',
     'common.cancel': 'キャンセル',
     'common.confirm': 'OK',

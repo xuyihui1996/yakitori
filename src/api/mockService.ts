@@ -195,6 +195,16 @@ export async function reviewRound(roundId: string, action: 'confirm' | 'reject')
   }
 }
 
+/**
+ * Toggle served status of a round item
+ */
+export async function toggleItemServed(itemId: string, served: boolean): Promise<void> {
+  await delay();
+  const item = roundItems.find(i => i.id === itemId);
+  if (!item) throw new Error('Item not found');
+  item.served = served;
+}
+
 // Merchant: Settle group by ID
 export async function settleGroupById(groupId: string): Promise<void> {
   await delay(500);

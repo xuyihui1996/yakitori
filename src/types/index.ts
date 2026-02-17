@@ -89,6 +89,7 @@ export interface RoundItem {
   status?: SharedStatus;
   allowSelfJoin?: boolean; // equal/ratio：允许成员自助加入
   allowClaimUnits?: boolean; // units：允许成员自助认领份数
+  served?: boolean; // 是否已出餐
 }
 
 // 菜单项冲突信息
